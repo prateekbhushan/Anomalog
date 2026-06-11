@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #060913;
+  --bg-secondary: rgba(11, 15, 25, 0.65);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-blue: #00e5ff;
+  --accent-red: #ff0055;
+  --accent-green: #00ff66;
+  --font-mono: 'Share Tech Mono', monospace;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-primary);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 229, 255, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 0, 85, 0.03) 0px, transparent 50%);
+  color: var(--text-primary);
+  font-family: 'Outfit', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-uptime {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent-blue);
+  letter-spacing: 0.05em;
+  background: rgba(0, 229, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-uptime::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent-green);
+}
+
+.ticker-container {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.ticker-item {
+  background: var(--bg-secondary);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 1.5rem;
+  border-radius: 12px;
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.5s ease-in-out;
+  transform: translateZ(0); /* Force GPU Acceleration */
+}
+
+.ticker-item:hover {
+  transform: translateY(-4px) translateZ(0);
+  box-shadow: 0 12px 30px rgba(0, 229, 255, 0.05);
+  border-color: rgba(0, 229, 255, 0.2);
+}
+
+.ticker-label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.5rem;
+}
+
+.ticker-value {
+  font-size: 2.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+}
+
+.ticker-unit {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.chart-card {
+  background: var(--bg-secondary);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out;
+  transform: translateZ(0); /* Force GPU Acceleration */
+}
+
+.chart-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.chart-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+/* Pulsating Neon Red Anomaly Glow */
+@keyframes anomaly-pulsate {
+  0% {
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.15), inset 0 0 5px rgba(255, 0, 85, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 0, 85, 0.5), inset 0 0 12px rgba(255, 0, 85, 0.15);
+    border-color: rgba(255, 0, 85, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.15), inset 0 0 5px rgba(255, 0, 85, 0.05);
+  }
+}
+
+.anomaly-glow {
+  animation: anomaly-pulsate 2s infinite ease-in-out;
+  border-color: rgba(255, 0, 85, 0.3) !important;
+}
+
+/* uPlot styles override */
+.uplot {
+  font-family: var(--font-mono);
+}
+.u-legend {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+.u-legend td {
+  padding: 2px 8px;
+}
+.u-legend th {
+  padding: 2px 8px;
+}
+
