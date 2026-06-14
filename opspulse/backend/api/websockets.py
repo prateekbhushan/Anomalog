@@ -50,7 +50,7 @@ forecaster = ResourceForecaster()
 async def stream_metrics():
     global history_buffer, forecast_counter, latest_forecasts
     r = get_redis()
-    last_id = '$'  # Only read new messages
+    last_id = '0'  # Read from the beginning of the stream to populate history
     while True:
         try:
             # Block for up to 1 second waiting for new metrics
@@ -131,12 +131,22 @@ async def stream_metrics():
             logger.error(f"Error reading from Redis Stream: {e}")
             await asyncio.sleep(1)
 
-@router.websocket("/ws/metrics")
+@router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
+        # Send current history_buffer and latest_forecasts immediately on connection
+        if history_buffer:
+            initial_payload = {
+                "type": "history",
+                "data": history_buffer,
+                "alerts": [],
+                "predictions": latest_forecasts
+            }
+            await websocket.send_text(json.dumps(initial_payload))
+            
         while True:
-            # Keep alive
+            # Keep alive / listen for client messages
             _ = await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

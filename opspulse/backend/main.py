@@ -94,3 +94,10 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# opspulse/backend/main.py ke bilkul niche yeh block hona chahiye:
+
+if __name__ == "__main__":
+    import uvicorn
+    # Tumhaara consumer loop agar thread mein nahi hai, toh uvicorn start nahi ho pata.
+    # Ensure karo ki uvicorn server explicitly port 8000 par launch ho:
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
