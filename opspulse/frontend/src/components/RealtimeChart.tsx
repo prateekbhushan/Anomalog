@@ -9,9 +9,11 @@ interface RealtimeChartProps {
   dataKey: 'cpu_usage' | 'memory_usage' | 'db_connections';
   color: string;
   history: any[];
+  containerClassName?: string;
+  canvasClassName?: string;
 }
 
-const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, color, history }) => {
+const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, color, history, containerClassName, canvasClassName }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const uplotInst = useRef<uPlot | null>(null);
 
@@ -136,9 +138,9 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
   }, [history, predictions, dataKey]);
 
   return (
-    <div className={`chart-card ${isAnomalous ? 'anomaly-glow' : ''}`}>
-      <h3>{title}</h3>
-      <div className="chart-wrapper" ref={chartRef} style={{ width: '100%', height: '100%', minHeight: '200px' }} />
+    <div className={`${containerClassName || 'chart-card'} ${isAnomalous ? 'anomaly-glow' : ''}`}>
+      <h3 className={containerClassName ? "text-lg font-bold tracking-wider uppercase font-mono-tech mb-4 text-slate-200" : ""}>{title}</h3>
+      <div className={canvasClassName || "chart-wrapper"} ref={chartRef} style={canvasClassName ? undefined : { width: '100%', height: '100%', minHeight: '200px' }} />
     </div>
   );
 };
