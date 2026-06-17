@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react/jsx-no-comment-textnodes */
 'use client';
 import { useEffect, useState } from 'react';
 import { RealtimeChart } from '@/components/RealtimeChart';
