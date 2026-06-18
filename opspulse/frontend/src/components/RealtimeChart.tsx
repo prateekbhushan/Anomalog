@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import React, { useEffect, useRef, memo } from 'react';
+import React, { useEffect, useRef, memo, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { useMetricsStore } from '@/hooks/useMetricsSocket';
@@ -17,6 +17,7 @@ interface RealtimeChartProps {
 const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, color, history, containerClassName, canvasClassName }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const uplotInst = useRef<uPlot | null>(null);
+  const [resizeTrigger, setResizeTrigger] = useState(0);
 
   const predictions = useMetricsStore((state) => state.predictions?.[dataKey]);
   const isAnomalous = useMetricsStore((state) => state.latestMetric?.anomalies?.[dataKey] ?? false);
@@ -24,9 +25,11 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
   useEffect(() => {
     if (!chartRef.current) return;
 
+    const initialWidth = chartRef.current.clientWidth || 350;
+
     const opts: uPlot.Options = {
-      width: chartRef.current.clientWidth,
-      height: chartRef.current.clientHeight,
+      width: initialWidth,
+      height: 350, // Strict height constraint
       scales: {
         x: { time: true },
         y: { auto: true },
@@ -71,25 +74,64 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
     };
 
     const initialData: [number[], number[], number[], number[], number[]] = [[], [], [], [], []];
+    
+    if (uplotInst.current) {
+      uplotInst.current.destroy();
+    }
     uplotInst.current = new uPlot(opts, initialData, chartRef.current);
+
+    let resizeObserver: ResizeObserver | null = null;
+    let resizeTimeout: any = null;
+
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver((entries) => {
+        if (resizeTimeout) {
+          clearTimeout(resizeTimeout);
+        }
+        resizeTimeout = setTimeout(() => {
+          requestAnimationFrame(() => {
+            if (!uplotInst.current || !chartRef.current) return;
+            const width = chartRef.current.clientWidth;
+            if (width > 0) {
+              const uWidth = (uplotInst.current as any).width;
+              // Only call setSize if the width difference is more than 2px to prevent sub-pixel layout loops
+              if (Math.abs(uWidth - width) > 2) {
+                uplotInst.current.setSize({ width: Math.floor(width), height: 350 });
+              }
+            }
+          });
+        }, 50); // 50ms debounce layout boundary check
+      });
+      resizeObserver.observe(chartRef.current);
+    }
 
     const handleResize = () => {
       if (uplotInst.current && chartRef.current) {
-        uplotInst.current.setSize({
-          width: chartRef.current.clientWidth,
-          height: chartRef.current.clientHeight,
-        });
+        const width = chartRef.current.clientWidth;
+        if (width > 0) {
+          const uWidth = (uplotInst.current as any).width;
+          if (Math.abs(uWidth - width) > 2) {
+            uplotInst.current.setSize({ width: Math.floor(width), height: 350 });
+          }
+        }
       }
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (uplotInst.current) {
         uplotInst.current.destroy();
+        uplotInst.current = null;
       }
     };
-  }, [color]);
+  }, [color, resizeTrigger]);
 
   useEffect(() => {
     if (!uplotInst.current || history.length === 0) return;
@@ -136,12 +178,37 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
     const yActualPad = [...yPast, ...Array(xFuture.length).fill(null)];
 
     uplotInst.current.setData([xCombined, yActualPad, yForecast, yLower, yUpper]);
+
+    // Force canvas re-render or layout recalculation if dimensions are zero or mismatch
+    if (chartRef.current) {
+      const width = chartRef.current.clientWidth;
+
+      if (width === 0) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('resize'));
+        }
+        setResizeTrigger(prev => prev + 1);
+      } else {
+        const uWidth = (uplotInst.current as any).width;
+        const uHeight = (uplotInst.current as any).height;
+        if (uWidth === 0 || uHeight !== 350 || Math.abs(uWidth - width) > 2) {
+          uplotInst.current.setSize({ width, height: 350 });
+        }
+      }
+    }
   }, [history, predictions, dataKey]);
 
   return (
-    <div className={`${containerClassName || 'chart-card'} ${isAnomalous ? 'anomaly-glow' : ''}`}>
+    <div className={`w-full min-h-[350px] ${containerClassName || 'chart-card'} ${isAnomalous ? 'anomaly-glow' : ''}`}>
       <h3 className={containerClassName ? "text-lg font-bold tracking-wider uppercase font-mono-tech mb-4 text-slate-200" : ""}>{title}</h3>
-      <div className={canvasClassName || "chart-wrapper"} ref={chartRef} style={canvasClassName ? undefined : { width: '100%', height: '100%', minHeight: '200px' }} />
+      {/* Parent container with strict CSS constraint to prevent infinite layout feedback loop */}
+      <div style={{ position: 'relative', width: '100%', height: '350px', overflow: 'hidden' }}>
+        <div 
+          className={canvasClassName || "chart-wrapper"} 
+          ref={chartRef} 
+          style={{ width: '100%', height: '100%' }} 
+        />
+      </div>
     </div>
   );
 };

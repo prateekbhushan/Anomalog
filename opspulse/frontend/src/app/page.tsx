@@ -97,15 +97,15 @@ export default function Home() {
       </nav>
 
       {/* Focused Component Toggling Layer */}
-      <div className="flex-1 flex flex-col min-h-0 w-full">
+      <div className="flex-1 flex flex-col min-h-[350px] w-full">
         {activeTab === 'cpu' && (
           <RealtimeChart
             title="CPU Telemetry"
             dataKey="cpu_usage"
             color="#00e5ff"
             history={history}
-            containerClassName="h-[60vh] min-h-[500px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
-            canvasClassName="flex-1 w-full"
+            containerClassName="h-[60vh] min-h-[350px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
+            canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}
 
@@ -115,8 +115,8 @@ export default function Home() {
             dataKey="memory_usage"
             color="#00ff66"
             history={history}
-            containerClassName="h-[60vh] min-h-[500px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
-            canvasClassName="flex-1 w-full"
+            containerClassName="h-[60vh] min-h-[350px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
+            canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}
 
@@ -126,8 +126,8 @@ export default function Home() {
             dataKey="db_connections"
             color="#ff0055"
             history={history}
-            containerClassName="h-[60vh] min-h-[500px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
-            canvasClassName="flex-1 w-full"
+            containerClassName="h-[60vh] min-h-[350px] w-full bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 relative flex flex-col"
+            canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}
 
