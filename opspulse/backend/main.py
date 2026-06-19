@@ -59,7 +59,21 @@ async def flush_metrics_to_db():
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up AnomaLog Backend...")
-    await init_db()
+    try:
+        logger.info("Initializing database connection with a 12-second timeout guard...")
+        await asyncio.wait_for(init_db(), timeout=12.0)
+    except asyncio.TimeoutError:
+        logger.error(
+            "Database initialization TIMEOUT: Failed to initialize database within 12 seconds. "
+            "Continuing startup without database initialization.",
+            exc_info=True
+        )
+    except Exception as e:
+        logger.error(
+            f"Database initialization ERROR: Failed to initialize database ({e}). "
+            "Continuing startup without database initialization.",
+            exc_info=True
+        )
     await init_redis()
     
     # Start background tasks

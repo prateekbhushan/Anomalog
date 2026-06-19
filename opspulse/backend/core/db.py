@@ -12,7 +12,12 @@ DB_NAME = os.getenv("DB_NAME", "anomalog")
 
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_timeout=10,
+    pool_recycle=3600
+)
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 Base = declarative_base()
@@ -31,13 +36,27 @@ class Metric(Base):
     db_connections = Column(Integer)
 
 async def init_db():
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"))
-        await conn.run_sync(Base.metadata.create_all)
-        
-        # Turn it into a hypertable
-        try:
-            await conn.execute(text("SELECT create_hypertable('metrics', 'timestamp', if_not_exists => TRUE);"))
-        except Exception as e:
-            print(f"Hypertable creation note: {e}")
+    import traceback
+    import sys
+    print("Database init: Starting initialization sequence...", flush=True)
+    try:
+        print(f"Database init: Attempting to connect to TimescaleDB at {DB_HOST}:{DB_PORT}...", flush=True)
+        # Create tables
+        async with engine.begin() as conn:
+            print("Database init: Connection established. Creating extension and tables if not exist...", flush=True)
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"))
+            await conn.run_sync(Base.metadata.create_all)
+            print("Database init: Extension and tables verified/created.", flush=True)
+            
+            # Turn it into a hypertable
+            try:
+                print("Database init: Transforming 'metrics' table into a TimescaleDB hypertable...", flush=True)
+                await conn.execute(text("SELECT create_hypertable('metrics', 'timestamp', if_not_exists => TRUE);"))
+                print("Database init: Hypertable transformation completed successfully.", flush=True)
+            except Exception as e:
+                print(f"Database init Warning: Hypertable creation note: {e}", flush=True)
+                traceback.print_exc(file=sys.stdout)
+    except Exception as e:
+        print("Database init ERROR: Failed during init_db operation!", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        raise e
