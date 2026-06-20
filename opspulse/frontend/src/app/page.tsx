@@ -5,10 +5,11 @@ import { RealtimeChart } from '@/components/RealtimeChart';
 import { useMetricsSocket, useMetricsStore } from '@/hooks/useMetricsSocket';
 
 export default function Home() {
-  // Connect to WebSocket using environment variable or explicit 127.0.0.1 fallback
+  // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
   const wsUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL
     ? process.env.NEXT_PUBLIC_WS_URL
-    : 'ws://127.0.0.1:8000/ws';
+    : 'ws://127.0.0.1:8000/ws/metrics';
+
   useMetricsSocket(wsUrl);
   const history = useMetricsStore(state => state.history);
 
@@ -56,41 +57,37 @@ export default function Home() {
       <nav className="bg-[#0b132b]/40 backdrop-blur-md border border-slate-800/60 rounded-xl p-1.5 flex gap-2 w-max shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <button
           onClick={() => setActiveTab('cpu')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${
-            activeTab === 'cpu'
-              ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
-          }`}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'cpu'
+            ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
+            }`}
         >
           // CPU Telemetry
         </button>
         <button
           onClick={() => setActiveTab('memory')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${
-            activeTab === 'memory'
-              ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
-          }`}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'memory'
+            ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
+            }`}
         >
           // Memory Allocation
         </button>
         <button
           onClick={() => setActiveTab('database')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${
-            activeTab === 'database'
-              ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
-          }`}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'database'
+            ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
+            }`}
         >
           // Database Pool
         </button>
         <button
           onClick={() => setActiveTab('config')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${
-            activeTab === 'config'
-              ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
-          }`}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'config'
+            ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-bold'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border-transparent'
+            }`}
         >
           // System Config
         </button>
