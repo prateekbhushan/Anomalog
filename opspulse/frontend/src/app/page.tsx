@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { RealtimeChart } from '@/components/RealtimeChart';
 import { useMetricsSocket, useMetricsStore } from '@/hooks/useMetricsSocket';
+import { AntigravityCard } from '@/components/AntigravityCard';
 
 export default function Home() {
   // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
@@ -133,7 +134,10 @@ export default function Home() {
             {/* Top Row: 3 analytical telemetry monitoring cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
               {/* CPU Usage Card */}
-              <div className={`relative overflow-hidden bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.08)] ${latestMetric?.anomalies?.cpu_usage ? 'animate-pulse border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : ''}`}>
+              <AntigravityCard
+                glowColor={latestMetric?.anomalies?.cpu_usage ? 'red' : 'cyan'}
+                isAnomaly={latestMetric?.anomalies?.cpu_usage}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// CPU UTILIZATION</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.cpu_usage ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'}`}>
@@ -149,10 +153,13 @@ export default function Home() {
                 <div className="mt-2 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
                   CORE_FREQ // STABLE // 3.8 GHz
                 </div>
-              </div>
+              </AntigravityCard>
 
               {/* Memory Allocation Card */}
-              <div className={`relative overflow-hidden bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.08)] ${latestMetric?.anomalies?.memory_usage ? 'animate-pulse border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : ''}`}>
+              <AntigravityCard
+                glowColor={latestMetric?.anomalies?.memory_usage ? 'red' : 'green'}
+                isAnomaly={latestMetric?.anomalies?.memory_usage}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// MEMORY ALLOCATION</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.memory_usage ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
@@ -168,10 +175,13 @@ export default function Home() {
                 <div className="mt-2 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
                   RAM_POOL // COMMITTED // LPDDR5
                 </div>
-              </div>
+              </AntigravityCard>
 
               {/* Active Connections Card */}
-              <div className={`relative overflow-hidden bg-[#070d19] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 hover:border-rose-500/40 hover:shadow-[0_0_20px_rgba(244,63,94,0.08)] ${latestMetric?.anomalies?.db_connections ? 'animate-pulse border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : ''}`}>
+              <AntigravityCard
+                glowColor={latestMetric?.anomalies?.db_connections ? 'red' : 'rose'}
+                isAnomaly={latestMetric?.anomalies?.db_connections}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.db_connections ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
@@ -187,7 +197,7 @@ export default function Home() {
                 <div className="mt-2 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
                   POOL_CAP // LIMIT_800 // ATOMIC
                 </div>
-              </div>
+              </AntigravityCard>
             </div>
 
             {/* Bottom Row: Predictive Analytics Panels */}

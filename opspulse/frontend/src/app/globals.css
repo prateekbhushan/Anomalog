@@ -231,6 +231,11 @@ body {
     font-family: var(--font-mono);
     letter-spacing: 0.05em;
   }
+
+  /* 3D Perspective for Antigravity Card Rotation */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
 }
 
 /* Neon Drop-Shadows Variants */
