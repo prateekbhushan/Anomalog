@@ -60,12 +60,12 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
 
   // Border and shadow glow colors based on props
   const borderColors = {
-    cyan: 'border-cyan-500/20 hover:border-cyan-400/40',
-    green: 'border-emerald-500/20 hover:border-emerald-400/40',
-    red: 'border-rose-500/20 hover:border-rose-400/40',
-    rose: 'border-rose-500/20 hover:border-rose-400/40',
-    emerald: 'border-emerald-500/20 hover:border-emerald-400/40',
-    none: 'border-slate-800/60 hover:border-slate-700/80',
+    cyan: 'border-slate-800 hover:border-cyan-500/40',
+    green: 'border-slate-800 hover:border-emerald-500/40',
+    red: 'border-slate-800 hover:border-rose-500/40',
+    rose: 'border-slate-800 hover:border-rose-500/40',
+    emerald: 'border-slate-800 hover:border-emerald-500/40',
+    none: 'border-slate-800 hover:border-slate-700',
   };
 
   const glowShadows = {
@@ -114,7 +114,7 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
           rotateY: rotateY,
           transformStyle: 'preserve-3d',
         }}
-        className={`relative overflow-hidden w-full h-full rounded-2xl border p-6 transition-all duration-300 ease-out will-change-transform bg-[#070d19] backdrop-blur-xl ${
+        className={`relative overflow-hidden w-full h-full rounded-xl border p-6 transition-all duration-300 ease-out will-change-transform bg-[#111827] backdrop-blur-xl ${
           borderColors[glowColor]
         } ${glowShadows[glowColor]} ${
           isAnomaly ? 'animate-pulse border-rose-500/50 shadow-[0_0_30px_rgba(244,63,94,0.25)]' : ''
