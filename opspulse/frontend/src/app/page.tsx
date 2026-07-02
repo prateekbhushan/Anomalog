@@ -4,6 +4,19 @@ import { useEffect, useState } from 'react';
 import { RealtimeChart } from '@/components/RealtimeChart';
 import { useMetricsSocket, useMetricsStore } from '@/hooks/useMetricsSocket';
 import { AntigravityCard } from '@/components/AntigravityCard';
+function parseAlertMessage(message: string) {
+  const regex = /3σ Drift:\s*(.*?)\s+spiked to\s+([\d.]+)\s*\(μ:\s*([\d.]+),\s*σ:\s*([\d.]+)\)/i;
+  const match = message.match(regex);
+  if (match) {
+    return {
+      metric: match[1],
+      value: match[2],
+      mean: match[3],
+      std: match[4]
+    };
+  }
+  return null;
+}
 
 export default function Home() {
   // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
@@ -76,8 +89,19 @@ export default function Home() {
               <span className="text-lg font-semibold text-cyan-400 font-mono-tech">%</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
-            CORE_FREQ // STABLE // 3.8 GHz
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">FREQ</span>
+              <span className="text-[11px] font-bold text-cyan-400 font-mono-tech uppercase mt-0.5">3.8 GHz</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">MODE</span>
+              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">CORE_FREQ</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">STATUS</span>
+              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">STABLE</span>
+            </div>
           </div>
         </AntigravityCard>
 
@@ -101,8 +125,19 @@ export default function Home() {
               <span className="text-lg font-semibold text-emerald-400 font-mono-tech">%</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
-            RAM_POOL // COMMITTED // LPDDR5
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">TYPE</span>
+              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">LPDDR5</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">POOL</span>
+              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">RAM_POOL</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">STATUS</span>
+              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">COMMITTED</span>
+            </div>
           </div>
         </AntigravityCard>
 
@@ -126,8 +161,19 @@ export default function Home() {
               <span className="text-lg font-semibold text-rose-400 font-mono-tech">CONNS</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-500 font-mono-tech tracking-wider uppercase">
-            POOL_CAP // LIMIT_800 // ATOMIC
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">ENGINE</span>
+              <span className="text-[11px] font-bold text-rose-400 font-mono-tech uppercase mt-0.5">ATOMIC</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">LIMIT</span>
+              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">800</span>
+            </div>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
+              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">POOL</span>
+              <span className="text-[11px] font-bold text-rose-400 font-mono-tech uppercase mt-0.5">POOL_CAP</span>
+            </div>
           </div>
         </AntigravityCard>
       </div>
@@ -210,21 +256,47 @@ export default function Home() {
             <span className="text-[10px] bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30 font-mono-tech font-bold animate-pulse">LIVE_STREAM</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
+          <div className="flex-1 overflow-y-auto pr-1">
             {safeAlerts.length === 0 ? (
-              <div className="text-slate-400 text-sm italic p-4 border border-dashed border-slate-800/60 rounded-lg font-mono-tech">
+              <div className="text-slate-400 text-xs italic p-4 border border-dashed border-slate-800/60 rounded-lg font-mono-tech">
                 ✓ System stable. No 3-sigma mathematical drift detected in the current window.
               </div>
             ) : (
-              safeAlerts.map((alert: any, idx: number) => (
-                <div key={idx} className="bg-white/[0.01] border-l-4 border-rose-500 p-3 rounded border border-slate-800/40">
-                  <div className="flex justify-between text-[10px] text-slate-400 font-mono-tech">
-                    <span>{alert.metric?.toUpperCase()} COMPONENT</span>
-                    <span>{alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'Just Now'}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-white font-mono-tech">{alert.message}</p>
-                </div>
-              ))
+              <table className="w-full text-left font-mono-tech border-collapse text-[10px]">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="pb-1.5 font-semibold text-left">TIMESTAMP</th>
+                    <th className="pb-1.5 font-semibold text-left">METRIC</th>
+                    <th className="pb-1.5 font-semibold text-right">VALUE</th>
+                    <th className="pb-1.5 font-semibold text-right">MEAN (μ)</th>
+                    <th className="pb-1.5 font-semibold text-right">STD (σ)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {safeAlerts.map((alert: any, idx: number) => {
+                    const parsed = parseAlertMessage(alert.message);
+                    const timeStr = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'NOW';
+                    if (parsed) {
+                      return (
+                        <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                          <td className="py-2 text-slate-400 font-semibold">{timeStr}</td>
+                          <td className="py-2 font-bold text-rose-400 uppercase">{parsed.metric}</td>
+                          <td className="py-2 text-right font-extrabold text-white">{parsed.value}</td>
+                          <td className="py-2 text-right text-slate-300 font-semibold">{parsed.mean}</td>
+                          <td className="py-2 text-right text-slate-400">{parsed.std}</td>
+                        </tr>
+                      );
+                    }
+                    return (
+                      <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                        <td className="py-2 text-slate-400 font-semibold">{timeStr}</td>
+                        <td className="py-2 font-bold text-rose-400 uppercase">{alert.metric || 'SYSTEM'}</td>
+                        <td colSpan={3} className="py-2 text-white">{alert.message}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
@@ -244,35 +316,35 @@ export default function Home() {
                 ⏳ Telemetry matrices compiling... Running rolling Autoregressive forecast.
               </div>
             ) : (
-              <div className="bg-white/[0.01] border-l-4 border-cyan-500 p-3 rounded border border-slate-800/40 flex flex-col gap-2">
-                <div className="flex justify-between text-[10px] text-slate-400 font-mono-tech">
-                  <span>STATSMODELS FORECAST ENGINE</span>
-                  <span>ACTIVE</span>
+              <div className="flex flex-col gap-2 w-full">
+                <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono-tech border-b border-slate-800/60 pb-2 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping"></span>
+                    <span>ENGINE: STATSMODELS AR</span>
+                  </div>
+                  <span>LOOKAHEAD: +1.5S</span>
                 </div>
-                <p className="text-xs text-white font-mono-tech font-bold">
-                  Projecting resource matrices 1.5 seconds into the future.
-                </p>
-                <div className="flex flex-col gap-2 mt-1">
-                  <div className="flex justify-between items-center text-xs font-mono-tech border-b border-slate-800/40 pb-1">
-                    <span className="text-slate-400">CPU Usage Forecast:</span>
-                    <span className="text-cyan-400 font-bold">
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
+                    <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">CPU Vector Forecast</span>
+                    <div className="bg-cyan-500/10 border border-cyan-500/80 text-cyan-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(6,182,212,0.15)] min-w-[80px] text-center">
                       {predictions?.cpu_usage?.values?.[0] !== undefined ? `${predictions.cpu_usage.values[0].toFixed(1)}%` : 'STABLE'}
-                    </span>
+                    </div>
                   </div>
                   {predictions?.memory_usage?.values?.[0] !== undefined && (
-                    <div className="flex justify-between items-center text-xs font-mono-tech border-b border-slate-800/40 pb-1">
-                      <span className="text-slate-400">Memory Allocation Forecast:</span>
-                      <span className="text-emerald-400 font-bold">
+                    <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
+                      <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">Memory Vector Forecast</span>
+                      <div className="bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(16,185,129,0.15)] min-w-[80px] text-center">
                         {predictions.memory_usage.values[0].toFixed(1)}%
-                      </span>
+                      </div>
                     </div>
                   )}
                   {predictions?.db_connections?.values?.[0] !== undefined && (
-                    <div className="flex justify-between items-center text-xs font-mono-tech pb-1">
-                      <span className="text-slate-400">Active Pool Forecast:</span>
-                      <span className="text-rose-400 font-bold">
+                    <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
+                      <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">Database Vector Forecast</span>
+                      <div className="bg-rose-500/10 border border-rose-500/80 text-rose-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(244,63,94,0.15)] min-w-[80px] text-center">
                         {predictions.db_connections.values[0].toFixed(0)} CONNS
-                      </span>
+                      </div>
                     </div>
                   )}
                 </div>
