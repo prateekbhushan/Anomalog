@@ -78,29 +78,33 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// CPU UTILIZATION</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.cpu_usage ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'}`}>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.cpu_usage ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
+                {!latestMetric?.anomalies?.cpu_usage && '• '}
                 {latestMetric?.anomalies?.cpu_usage ? 'ANOMALY_DETECTED' : 'SYS_NOMINAL'}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-4xl font-black text-white font-mono-tech">
+            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
+              <span 
+                className="text-4xl font-black text-[#00e5ff] font-mono-tech tracking-tight"
+                style={{ textShadow: '0 0 10px rgba(0, 229, 255, 0.45)' }}
+              >
                 {latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? Math.round(latestMetric.cpu_usage) : '0'}
               </span>
-              <span className="text-lg font-semibold text-cyan-400 font-mono-tech">%</span>
+              <span className="text-lg font-bold text-cyan-400 font-mono-tech">%</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">FREQ</span>
-              <span className="text-[11px] font-bold text-cyan-400 font-mono-tech uppercase mt-0.5">3.8 GHz</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">FREQ</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">3.8 GHz</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">MODE</span>
-              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">CORE_FREQ</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">MODE</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">CORE_FREQ</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">STATUS</span>
-              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">STABLE</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">STATUS</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">STABLE</span>
             </div>
           </div>
         </AntigravityCard>
@@ -114,29 +118,33 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// MEMORY ALLOCATION</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.memory_usage ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.memory_usage ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
+                {!latestMetric?.anomalies?.memory_usage && '• '}
                 {latestMetric?.anomalies?.memory_usage ? 'LIMIT_WARNING' : 'SYS_NOMINAL'}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-4xl font-black text-white font-mono-tech">
+            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
+              <span 
+                className="text-4xl font-black text-white font-mono-tech tracking-tight"
+                style={{ textShadow: '0 0 10px rgba(16, 185, 129, 0.45)' }}
+              >
                 {latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? Math.round(latestMetric.memory_usage) : '0'}
               </span>
-              <span className="text-lg font-semibold text-emerald-400 font-mono-tech">%</span>
+              <span className="text-lg font-bold text-emerald-400 font-mono-tech">%</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">TYPE</span>
-              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">LPDDR5</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">TYPE</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">LPDDR5</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">POOL</span>
-              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">RAM_POOL</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">POOL</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">RAM_POOL</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">STATUS</span>
-              <span className="text-[11px] font-bold text-emerald-400 font-mono-tech uppercase mt-0.5">COMMITTED</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">STATUS</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">COMMITTED</span>
             </div>
           </div>
         </AntigravityCard>
@@ -150,29 +158,33 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono-tech ${latestMetric?.anomalies?.db_connections ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.db_connections ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
+                {!latestMetric?.anomalies?.db_connections && '• '}
                 {latestMetric?.anomalies?.db_connections ? 'SPIKE_DETECTED' : 'SYS_NOMINAL'}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-4xl font-black text-white font-mono-tech">
+            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
+              <span 
+                className="text-4xl font-black text-white font-mono-tech tracking-tight"
+                style={{ textShadow: '0 0 10px rgba(244, 63, 94, 0.45)' }}
+              >
                 {latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? Math.round(latestMetric.db_connections) : '0'}
               </span>
-              <span className="text-lg font-semibold text-rose-400 font-mono-tech">CONNS</span>
+              <span className="text-lg font-bold text-rose-400 font-mono-tech">CONNS</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">ENGINE</span>
-              <span className="text-[11px] font-bold text-rose-400 font-mono-tech uppercase mt-0.5">ATOMIC</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">ENGINE</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">ATOMIC</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">LIMIT</span>
-              <span className="text-[11px] font-bold text-slate-200 font-mono-tech uppercase mt-0.5">800</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">LIMIT</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">800</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between">
-              <span className="text-[9px] text-slate-500 font-mono-tech uppercase">POOL</span>
-              <span className="text-[11px] font-bold text-rose-400 font-mono-tech uppercase mt-0.5">POOL_CAP</span>
+            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
+              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">POOL</span>
+              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">POOL_CAP</span>
             </div>
           </div>
         </AntigravityCard>
