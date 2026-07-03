@@ -16,7 +16,57 @@ function parseAlertMessage(message: string) {
     };
   }
   return null;
+}interface SeverityConfig {
+  level: 'normal' | 'warning' | 'critical' | 'danger';
+  colorClass: string;
+  bgClass: string;
+  borderClass: string;
+  glowColor: 'cyan' | 'green' | 'yellow' | 'orange' | 'red' | 'rose' | 'emerald';
+  statusText: string;
+  glowShadow: string;
 }
+
+const getMetricSeverity = (
+  value: number,
+  key: 'cpu_usage' | 'memory_usage' | 'db_connections',
+  isAnomaly: boolean
+): SeverityConfig => {
+  if (key === 'cpu_usage') {
+    if (value >= 90) {
+      return { level: 'danger', colorClass: 'text-red-500', bgClass: 'bg-red-950/40', borderClass: 'border-red-500/30', glowColor: 'red', statusText: 'DANGER_CRITICAL', glowShadow: 'rgba(239, 68, 68, 0.75)' };
+    }
+    if (value >= 75) {
+      return { level: 'critical', colorClass: 'text-orange-500', bgClass: 'bg-orange-950/40', borderClass: 'border-orange-500/30', glowColor: 'orange', statusText: 'CRITICAL_SPIKE', glowShadow: 'rgba(249, 115, 22, 0.6)' };
+    }
+    if (value >= 60 || isAnomaly) {
+      return { level: 'warning', colorClass: 'text-yellow-400', bgClass: 'bg-yellow-950/30', borderClass: 'border-yellow-500/20', glowColor: 'yellow', statusText: 'WARNING_DRIFT', glowShadow: 'rgba(245, 158, 11, 0.5)' };
+    }
+    return { level: 'normal', colorClass: 'text-cyan-400', bgClass: 'bg-cyan-950/20', borderClass: 'border-cyan-500/20', glowColor: 'cyan', statusText: 'SYS_NOMINAL', glowShadow: 'rgba(0, 229, 255, 0.45)' };
+  } else if (key === 'memory_usage') {
+    if (value >= 90) {
+      return { level: 'danger', colorClass: 'text-red-500', bgClass: 'bg-red-950/40', borderClass: 'border-red-500/30', glowColor: 'red', statusText: 'DANGER_LIMIT', glowShadow: 'rgba(239, 68, 68, 0.75)' };
+    }
+    if (value >= 75) {
+      return { level: 'critical', colorClass: 'text-orange-500', bgClass: 'bg-orange-950/40', borderClass: 'border-orange-500/30', glowColor: 'orange', statusText: 'LIMIT_WARNING', glowShadow: 'rgba(249, 115, 22, 0.6)' };
+    }
+    if (value >= 60 || isAnomaly) {
+      return { level: 'warning', colorClass: 'text-yellow-400', bgClass: 'bg-yellow-950/30', borderClass: 'border-yellow-500/20', glowColor: 'yellow', statusText: 'WARNING_DRIFT', glowShadow: 'rgba(245, 158, 11, 0.5)' };
+    }
+    return { level: 'normal', colorClass: 'text-emerald-400', bgClass: 'bg-emerald-950/20', borderClass: 'border-emerald-500/20', glowColor: 'green', statusText: 'SYS_NOMINAL', glowShadow: 'rgba(16, 185, 129, 0.45)' };
+  } else {
+    // db_connections
+    if (value >= 650) {
+      return { level: 'danger', colorClass: 'text-red-500', bgClass: 'bg-red-950/40', borderClass: 'border-red-500/30', glowColor: 'red', statusText: 'DANGER_SPIKE', glowShadow: 'rgba(239, 68, 68, 0.75)' };
+    }
+    if (value >= 450) {
+      return { level: 'critical', colorClass: 'text-orange-500', bgClass: 'bg-orange-950/40', borderClass: 'border-orange-500/30', glowColor: 'orange', statusText: 'POOL_WARNING', glowShadow: 'rgba(249, 115, 22, 0.6)' };
+    }
+    if (value >= 250 || isAnomaly) {
+      return { level: 'warning', colorClass: 'text-yellow-400', bgClass: 'bg-yellow-950/30', borderClass: 'border-yellow-500/20', glowColor: 'yellow', statusText: 'WARNING_DRIFT', glowShadow: 'rgba(245, 158, 11, 0.5)' };
+    }
+    return { level: 'normal', colorClass: 'text-rose-400', bgClass: 'bg-rose-950/20', borderClass: 'border-rose-500/20', glowColor: 'rose', statusText: 'SYS_NOMINAL', glowShadow: 'rgba(244, 63, 94, 0.45)' };
+  }
+};
 
 export default function Home() {
   // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
@@ -55,6 +105,34 @@ export default function Home() {
     return `${hrs}:${mins}:${secs}`;
   };
 
+  const getHistoryStats = (key: 'cpu_usage' | 'memory_usage' | 'db_connections') => {
+    if (!history || history.length === 0) {
+      const currentVal = latestMetric?.[key] ?? 0;
+      return { min: currentVal, max: currentVal, avg: currentVal };
+    }
+    const vals = history.map(h => h[key]).filter(v => v !== undefined && v !== null);
+    if (vals.length === 0) {
+      const currentVal = latestMetric?.[key] ?? 0;
+      return { min: currentVal, max: currentVal, avg: currentVal };
+    }
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const avg = vals.reduce((sum, v) => sum + v, 0) / vals.length;
+    return { min, max, avg };
+  };
+
+  const cpuVal = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
+  const memVal = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
+  const dbVal = latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? latestMetric.db_connections : 0;
+
+  const cpuSeverity = getMetricSeverity(cpuVal, 'cpu_usage', !!latestMetric?.anomalies?.cpu_usage);
+  const memSeverity = getMetricSeverity(memVal, 'memory_usage', !!latestMetric?.anomalies?.memory_usage);
+  const dbSeverity = getMetricSeverity(dbVal, 'db_connections', !!latestMetric?.anomalies?.db_connections);
+
+  const cpuStats = getHistoryStats('cpu_usage');
+  const memStats = getHistoryStats('memory_usage');
+  const dbStats = getHistoryStats('db_connections');
+
   return (
     <main className="min-h-screen w-full flex flex-col bg-[#050b14] p-6 gap-6 overflow-y-auto">
       {/* Page Header */}
@@ -71,120 +149,156 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         {/* CPU Usage Card */}
         <AntigravityCard
-          glowColor={latestMetric?.anomalies?.cpu_usage ? 'red' : 'cyan'}
-          isAnomaly={latestMetric?.anomalies?.cpu_usage}
+          glowColor={cpuSeverity.glowColor}
+          isAnomaly={!!latestMetric?.anomalies?.cpu_usage}
+          severity={cpuSeverity.level}
           className="bg-[#111827] border border-slate-800 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// CPU UTILIZATION</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.cpu_usage ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
-                {!latestMetric?.anomalies?.cpu_usage && '• '}
-                {latestMetric?.anomalies?.cpu_usage ? 'ANOMALY_DETECTED' : 'SYS_NOMINAL'}
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
+                cpuSeverity.level !== 'normal' 
+                  ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
+              }`}>
+                {cpuSeverity.statusText}
               </span>
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className="text-4xl font-black text-[#00e5ff] font-mono-tech tracking-tight"
-                style={{ textShadow: '0 0 10px rgba(0, 229, 255, 0.45)' }}
+                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${cpuSeverity.colorClass}`}
+                style={{ textShadow: `0 0 15px ${cpuSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
-                {latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? Math.round(latestMetric.cpu_usage) : '0'}
+                {cpuVal !== 0 ? Math.round(cpuVal) : '0'}
               </span>
-              <span className="text-lg font-bold text-cyan-400 font-mono-tech">%</span>
+              <span className={`text-xl font-bold font-mono-tech ${cpuSeverity.colorClass}`}>%</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">FREQ</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">3.8 GHz</span>
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(cpuStats.min)}%</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">MODE</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">CORE_FREQ</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(cpuStats.max)}%</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">STATUS</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">STABLE</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{cpuStats.avg.toFixed(1)}%</span>
+            </div>
+            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
+              cpuSeverity.level !== 'normal' 
+                ? `${cpuSeverity.bgClass} ${cpuSeverity.borderClass} shadow-[0_0_10px_${cpuSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
+                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+            }`}>
+              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${cpuSeverity.level !== 'normal' ? cpuSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
+              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${cpuSeverity.level !== 'normal' ? cpuSeverity.colorClass : 'text-cyan-400'}`}>{cpuSeverity.level}</span>
             </div>
           </div>
         </AntigravityCard>
 
         {/* Memory Allocation Card */}
         <AntigravityCard
-          glowColor={latestMetric?.anomalies?.memory_usage ? 'red' : 'green'}
-          isAnomaly={latestMetric?.anomalies?.memory_usage}
+          glowColor={memSeverity.glowColor}
+          isAnomaly={!!latestMetric?.anomalies?.memory_usage}
+          severity={memSeverity.level}
           className="bg-[#111827] border border-slate-800 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// MEMORY ALLOCATION</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.memory_usage ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
-                {!latestMetric?.anomalies?.memory_usage && '• '}
-                {latestMetric?.anomalies?.memory_usage ? 'LIMIT_WARNING' : 'SYS_NOMINAL'}
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
+                memSeverity.level !== 'normal' 
+                  ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
+              }`}>
+                {memSeverity.statusText}
               </span>
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className="text-4xl font-black text-white font-mono-tech tracking-tight"
-                style={{ textShadow: '0 0 10px rgba(16, 185, 129, 0.45)' }}
+                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${memSeverity.colorClass}`}
+                style={{ textShadow: `0 0 15px ${memSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
-                {latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? Math.round(latestMetric.memory_usage) : '0'}
+                {memVal !== 0 ? Math.round(memVal) : '0'}
               </span>
-              <span className="text-lg font-bold text-emerald-400 font-mono-tech">%</span>
+              <span className={`text-xl font-bold font-mono-tech ${memSeverity.colorClass}`}>%</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">TYPE</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">LPDDR5</span>
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(memStats.min)}%</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">POOL</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">RAM_POOL</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(memStats.max)}%</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">STATUS</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">COMMITTED</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{memStats.avg.toFixed(1)}%</span>
+            </div>
+            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
+              memSeverity.level !== 'normal' 
+                ? `${memSeverity.bgClass} ${memSeverity.borderClass} shadow-[0_0_10px_${memSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
+                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+            }`}>
+              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${memSeverity.level !== 'normal' ? memSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
+              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${memSeverity.level !== 'normal' ? memSeverity.colorClass : 'text-cyan-400'}`}>{memSeverity.level}</span>
             </div>
           </div>
         </AntigravityCard>
 
         {/* Active Connections Card */}
         <AntigravityCard
-          glowColor={latestMetric?.anomalies?.db_connections ? 'red' : 'rose'}
-          isAnomaly={latestMetric?.anomalies?.db_connections}
+          glowColor={dbSeverity.glowColor}
+          isAnomaly={!!latestMetric?.anomalies?.db_connections}
+          severity={dbSeverity.level}
           className="bg-[#111827] border border-slate-800 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech ${latestMetric?.anomalies?.db_connections ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-black tracking-wider animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold'}`}>
-                {!latestMetric?.anomalies?.db_connections && '• '}
-                {latestMetric?.anomalies?.db_connections ? 'SPIKE_DETECTED' : 'SYS_NOMINAL'}
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
+                dbSeverity.level !== 'normal' 
+                  ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
+              }`}>
+                {dbSeverity.statusText}
               </span>
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className="text-4xl font-black text-white font-mono-tech tracking-tight"
-                style={{ textShadow: '0 0 10px rgba(244, 63, 94, 0.45)' }}
+                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${dbSeverity.colorClass}`}
+                style={{ textShadow: `0 0 15px ${dbSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
-                {latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? Math.round(latestMetric.db_connections) : '0'}
+                {dbVal !== 0 ? Math.round(dbVal) : '0'}
               </span>
-              <span className="text-lg font-bold text-rose-400 font-mono-tech">CONNS</span>
+              <span className={`text-lg font-bold font-mono-tech ${dbSeverity.colorClass}`}>CONNS</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">ENGINE</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">ATOMIC</span>
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.min)}</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">LIMIT</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">800</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.max)}</span>
             </div>
-            <div className="bg-[#0d1527] border border-slate-800/40 p-1.5 rounded text-center flex flex-col justify-between items-center">
-              <span className="text-[9px] text-slate-400 font-mono-tech uppercase font-semibold">POOL</span>
-              <span className="bg-slate-900 text-cyan-400 border border-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md mt-1 inline-block font-bold">POOL_CAP</span>
+            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
+              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.avg)}</span>
+            </div>
+            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
+              dbSeverity.level !== 'normal' 
+                ? `${dbSeverity.bgClass} ${dbSeverity.borderClass} shadow-[0_0_10px_${dbSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
+                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+            }`}>
+              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${dbSeverity.level !== 'normal' ? dbSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
+              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${dbSeverity.level !== 'normal' ? dbSeverity.colorClass : 'text-cyan-400'}`}>{dbSeverity.level}</span>
             </div>
           </div>
         </AntigravityCard>
