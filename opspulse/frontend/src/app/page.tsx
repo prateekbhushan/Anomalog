@@ -68,6 +68,19 @@ const getMetricSeverity = (
   }
 };
 
+const getSystemSeverity = (health: number): SeverityConfig => {
+  if (health >= 85) {
+    return { level: 'normal', colorClass: 'text-cyan-400', bgClass: 'bg-cyan-950/20', borderClass: 'border-cyan-500/20', glowColor: 'cyan', statusText: 'HEALTHY', glowShadow: 'rgba(0, 229, 255, 0.45)' };
+  }
+  if (health >= 70) {
+    return { level: 'warning', colorClass: 'text-yellow-400', bgClass: 'bg-yellow-950/30', borderClass: 'border-yellow-500/20', glowColor: 'yellow', statusText: 'DEGRADED', glowShadow: 'rgba(245, 158, 11, 0.5)' };
+  }
+  if (health >= 50) {
+    return { level: 'critical', colorClass: 'text-orange-500', bgClass: 'bg-orange-950/40', borderClass: 'border-orange-500/30', glowColor: 'orange', statusText: 'SYS_CRITICAL', glowShadow: 'rgba(249, 115, 22, 0.6)' };
+  }
+  return { level: 'danger', colorClass: 'text-red-500', bgClass: 'bg-red-950/40', borderClass: 'border-red-500/30', glowColor: 'red', statusText: 'CRITICAL_FAIL', glowShadow: 'rgba(239, 68, 68, 0.75)' };
+};
+
 export default function Home() {
   // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
   const wsUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL
@@ -82,11 +95,20 @@ export default function Home() {
   const predictions = useMetricsStore((state: any) => state.predictions);
   const latestMetric = useMetricsStore((state: any) => state.latestMetric);
 
+  const cpuVal = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
+  const memVal = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
+  const dbVal = latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? latestMetric.db_connections : 0;
+
+  const systemHealthVal = Math.max(0, Math.min(100, Math.round(
+    100 - (cpuVal * 0.4 + memVal * 0.4 + Math.min(dbVal, 1000) * 0.02) -
+    ((latestMetric?.anomalies?.cpu_usage ? 10 : 0) + (latestMetric?.anomalies?.memory_usage ? 10 : 0) + (latestMetric?.anomalies?.db_connections ? 10 : 0))
+  )));
+
   // Safe fallback to handle arrays cleanly during mapping loops
   const safeAlerts = Array.isArray(alerts) ? alerts : [];
 
   // Tab state routing engine
-  const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'database'>('cpu');
+  const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'database' | 'system'>('system');
 
   // Live connection uptime tracker
   const [uptime, setUptime] = useState(0);
@@ -105,14 +127,25 @@ export default function Home() {
     return `${hrs}:${mins}:${secs}`;
   };
 
-  const getHistoryStats = (key: 'cpu_usage' | 'memory_usage' | 'db_connections') => {
-    if (!history || history.length === 0) {
-      const currentVal = latestMetric?.[key] ?? 0;
+  const getHistoryStats = (key: 'cpu_usage' | 'memory_usage' | 'db_connections' | 'system_health') => {
+    const mappedHistory = (history || []).map(h => {
+      const cpu = h.cpu_usage ?? 0;
+      const mem = h.memory_usage ?? 0;
+      const db = h.db_connections ?? 0;
+      const system_health = Math.max(0, Math.min(100, Math.round(
+        100 - (cpu * 0.4 + mem * 0.4 + Math.min(db, 1000) * 0.02) -
+        ((h.anomalies?.cpu_usage ? 10 : 0) + (h.anomalies?.memory_usage ? 10 : 0) + (h.anomalies?.db_connections ? 10 : 0))
+      )));
+      return { ...h, system_health };
+    });
+
+    if (mappedHistory.length === 0) {
+      const currentVal = key === 'system_health' ? systemHealthVal : (latestMetric?.[key] ?? 0);
       return { min: currentVal, max: currentVal, avg: currentVal };
     }
-    const vals = history.map(h => h[key]).filter(v => v !== undefined && v !== null);
+    const vals = mappedHistory.map(h => h[key]).filter(v => v !== undefined && v !== null);
     if (vals.length === 0) {
-      const currentVal = latestMetric?.[key] ?? 0;
+      const currentVal = key === 'system_health' ? systemHealthVal : (latestMetric?.[key] ?? 0);
       return { min: currentVal, max: currentVal, avg: currentVal };
     }
     const min = Math.min(...vals);
@@ -121,17 +154,26 @@ export default function Home() {
     return { min, max, avg };
   };
 
-  const cpuVal = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
-  const memVal = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
-  const dbVal = latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? latestMetric.db_connections : 0;
-
   const cpuSeverity = getMetricSeverity(cpuVal, 'cpu_usage', !!latestMetric?.anomalies?.cpu_usage);
   const memSeverity = getMetricSeverity(memVal, 'memory_usage', !!latestMetric?.anomalies?.memory_usage);
   const dbSeverity = getMetricSeverity(dbVal, 'db_connections', !!latestMetric?.anomalies?.db_connections);
+  const systemSeverity = getSystemSeverity(systemHealthVal);
 
   const cpuStats = getHistoryStats('cpu_usage');
   const memStats = getHistoryStats('memory_usage');
   const dbStats = getHistoryStats('db_connections');
+  const systemHealthStats = getHistoryStats('system_health');
+
+  const systemHealthHistory = (history || []).map(h => {
+    const cpu = h.cpu_usage ?? 0;
+    const mem = h.memory_usage ?? 0;
+    const db = h.db_connections ?? 0;
+    const system_health = Math.max(0, Math.min(100, Math.round(
+      100 - (cpu * 0.4 + mem * 0.4 + Math.min(db, 1000) * 0.02) -
+      ((h.anomalies?.cpu_usage ? 10 : 0) + (h.anomalies?.memory_usage ? 10 : 0) + (h.anomalies?.db_connections ? 10 : 0))
+    )));
+    return { ...h, system_health };
+  });
 
   return (
     <main className="min-h-screen w-full flex flex-col bg-[#050b14] p-6 gap-6 overflow-y-auto">
@@ -307,6 +349,15 @@ export default function Home() {
       {/* Cyberpunk Navigation Menu Bar */}
       <nav className="bg-[#111827] border border-slate-800 rounded-xl p-1.5 flex gap-2 w-max shadow-xl">
         <button
+          onClick={() => setActiveTab('system')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'system'
+            ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
+            : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
+            }`}
+        >
+          // System Health
+        </button>
+        <button
           onClick={() => setActiveTab('cpu')}
           className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'cpu'
             ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
@@ -337,6 +388,124 @@ export default function Home() {
 
       {/* Focused Component Toggling Layer */}
       <div className="flex-1 flex flex-col min-h-[350px] w-full">
+        {activeTab === 'system' && (
+          <div className="flex flex-col gap-6 w-full">
+            {/* Top row of system tab: Composite score + individual values */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Composite Health Box (2/3 width) */}
+              <div className="lg:col-span-2">
+                <AntigravityCard
+                  glowColor={systemSeverity.glowColor}
+                  isAnomaly={!!latestMetric?.anomalies?.cpu_usage || !!latestMetric?.anomalies?.memory_usage || !!latestMetric?.anomalies?.db_connections}
+                  severity={systemSeverity.level}
+                  className="bg-[#111827] border border-slate-800 rounded-xl"
+                >
+                  <div className="flex flex-col gap-2 h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// OVERALL SYSTEM HEALTH</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
+                          systemSeverity.level !== 'normal' 
+                            ? `${systemSeverity.bgClass} ${systemSeverity.colorClass} ${systemSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
+                        }`}>
+                          {systemSeverity.statusText}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2">// Weighted telemetry composite. Active anomalies trigger metric penalties.</p>
+                    </div>
+
+                    <div className="my-6 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-4 rounded-lg w-max border-l border-slate-800/40">
+                      <span 
+                        className={`text-6xl font-black font-mono-tech tracking-tight transition-all duration-300 ${systemSeverity.colorClass}`}
+                        style={{ textShadow: `0 0 15px ${systemSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
+                      >
+                        {systemHealthVal}
+                      </span>
+                      <span className={`text-2xl font-bold font-mono-tech ${systemSeverity.colorClass}`}>%</span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-800/60">
+                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN HEALTH</span>
+                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(systemHealthStats.min)}%</span>
+                      </div>
+                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX HEALTH</span>
+                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(systemHealthStats.max)}%</span>
+                      </div>
+                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
+                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG HEALTH</span>
+                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{systemHealthStats.avg.toFixed(1)}%</span>
+                      </div>
+                      <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
+                        systemSeverity.level !== 'normal' 
+                          ? `${systemSeverity.bgClass} ${systemSeverity.borderClass} shadow-[0_0_10px_${systemSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
+                          : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+                      }`}>
+                        <span className={`text-[9px] font-mono-tech uppercase font-semibold ${systemSeverity.level !== 'normal' ? systemSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
+                        <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${systemSeverity.level !== 'normal' ? systemSeverity.colorClass : 'text-cyan-400'}`}>{systemSeverity.level}</span>
+                      </div>
+                    </div>
+                  </div>
+                </AntigravityCard>
+              </div>
+
+              {/* Individual Metrics Panel (1/3 width) */}
+              <div className="flex flex-col gap-4">
+                {/* CPU */}
+                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-cyan-500/30 transition-all duration-300">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono-tech text-slate-400">// CPU</span>
+                    <span className={`text-xl font-bold font-mono-tech mt-1 ${cpuSeverity.colorClass}`}>{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                    cpuSeverity.level !== 'normal' ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {cpuSeverity.statusText}
+                  </span>
+                </div>
+
+                {/* Memory */}
+                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-emerald-500/30 transition-all duration-300">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono-tech text-slate-400">// RAM</span>
+                    <span className={`text-xl font-bold font-mono-tech mt-1 ${memSeverity.colorClass}`}>{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                    memSeverity.level !== 'normal' ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {memSeverity.statusText}
+                  </span>
+                </div>
+
+                {/* Connections */}
+                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-rose-500/30 transition-all duration-300">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono-tech text-slate-400">// DB POOL</span>
+                    <span className={`text-xl font-bold font-mono-tech mt-1 ${dbSeverity.colorClass}`}>{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                    dbSeverity.level !== 'normal' ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {dbSeverity.statusText}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom: Trend Graph */}
+            <RealtimeChart
+              title="System Health Score Trend Graph"
+              dataKey="system_health"
+              color="#00e5ff"
+              history={systemHealthHistory}
+              containerClassName="h-[40vh] min-h-[350px] w-full bg-[#111827] border border-slate-800 rounded-xl p-6 relative flex flex-col shadow-lg"
+              canvasClassName="flex-1 w-full min-h-[300px]"
+            />
+          </div>
+        )}
+
         {activeTab === 'cpu' && (
           <RealtimeChart
             title="CPU Telemetry Graph"

@@ -7,7 +7,7 @@ import { useMetricsStore } from '@/hooks/useMetricsSocket';
 
 interface RealtimeChartProps {
   title: string;
-  dataKey: 'cpu_usage' | 'memory_usage' | 'db_connections';
+  dataKey: 'cpu_usage' | 'memory_usage' | 'db_connections' | 'system_health';
   color: string;
   history: any[];
   containerClassName?: string;
@@ -19,8 +19,8 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
   const uplotInst = useRef<uPlot | null>(null);
   const [resizeTrigger, setResizeTrigger] = useState(0);
 
-  const predictions = useMetricsStore((state) => state.predictions?.[dataKey]);
-  const isAnomalous = useMetricsStore((state) => state.latestMetric?.anomalies?.[dataKey] ?? false);
+  const predictions = useMetricsStore((state) => state.predictions?.[dataKey as any]);
+  const isAnomalous = useMetricsStore((state) => (state.latestMetric?.anomalies as any)?.[dataKey] ?? false);
 
   useEffect(() => {
     if (!chartRef.current) return;
