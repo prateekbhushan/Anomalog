@@ -1,3 +1,4 @@
+import math
 import asyncio
 import logging
 import random
@@ -33,6 +34,7 @@ class ConnectionManager:
             except Exception:
                 pass
 
+# Active WebSocket connections manager block
 manager = ConnectionManager()
 
 # Global state for computation
@@ -53,63 +55,97 @@ async def start_force_telemetry_broadcast():
     global history_buffer, forecast_counter, latest_forecasts
     logger.info("🚀 BYPASS ENGINE: Direct telemetry loop active...")
     t = 0
+    
+    # State variables for ARMA(1, 1) and drift
+    cpu_base = 30.0
+    mem_base = 40.0
+    db_base = 50.0
+
+    cpu_noise = 0.0
+    cpu_eps_prev = 0.0
+    
+    mem_noise = 0.0
+    mem_eps_prev = 0.0
+    
+    db_noise = 0.0
+    db_eps_prev = 0.0
+
+    in_anomaly = False
+    anomaly_step = 0
+    anomaly_duration = 0
+    
+    cycles_since_anomaly = 0
+    next_anomaly_target = random.randint(20, 30)
+
     while True:
         try:
             await asyncio.sleep(1) # Frequency locked to 1Hz
             t += 1
 
-            # Simulate periodic spikes of varying severity
-            cpu_spike = False
-            cpu_spike_val = 0.0
-            if (t // 30) % 3 == 0 and (t % 30 < 5): # Warning CPU spike
-                cpu_spike = True
-                cpu_spike_val = random.uniform(62.0, 72.0)
-            elif (t // 30) % 3 == 1 and (t % 30 < 5): # Critical CPU spike
-                cpu_spike = True
-                cpu_spike_val = random.uniform(76.0, 86.0)
-            elif (t // 30) % 3 == 2 and (t % 30 < 5): # Danger CPU spike
-                cpu_spike = True
-                cpu_spike_val = random.uniform(91.0, 98.0)
+            # Check if we should trigger an anomaly
+            if not in_anomaly:
+                cycles_since_anomaly += 1
+                if cycles_since_anomaly >= next_anomaly_target:
+                    in_anomaly = True
+                    anomaly_step = 0
+                    anomaly_duration = random.randint(4, 5) # lasts 4 to 5 steps
 
-            mem_spike = False
-            mem_spike_val = 0.0
-            if (t // 45) % 3 == 0 and (t % 45 < 5): # Warning Memory spike
-                mem_spike = True
-                mem_spike_val = random.uniform(62.0, 72.0)
-            elif (t // 45) % 3 == 1 and (t % 45 < 5): # Critical Memory spike
-                mem_spike = True
-                mem_spike_val = random.uniform(76.0, 85.0)
-            elif (t // 45) % 3 == 2 and (t % 45 < 5): # Danger Memory spike
-                mem_spike = True
-                mem_spike_val = random.uniform(91.0, 97.0)
+            # Generate normal ARMA(1, 1) component
+            # random.normalvariate yields Gaussian/normal distribution
+            cpu_eps = random.normalvariate(0, 2.0)
+            mem_eps = random.normalvariate(0, 0.4)
+            db_eps = random.normalvariate(0, 2.5)
 
-            db_spike = False
-            db_spike_val = 0
-            if (t // 60) % 3 == 0 and (t % 60 < 5): # Warning DB spike
-                db_spike = True
-                db_spike_val = random.randint(280, 360)
-            elif (t // 60) % 3 == 1 and (t % 60 < 5): # Critical DB spike
-                db_spike = True
-                db_spike_val = random.randint(480, 560)
-            elif (t // 60) % 3 == 2 and (t % 60 < 5): # Danger DB spike
-                db_spike = True
-                db_spike_val = random.randint(670, 760)
+            cpu_noise = 0.92 * cpu_noise + cpu_eps - 0.3 * cpu_eps_prev
+            cpu_eps_prev = cpu_eps
 
-            # Define base values or spiked values
-            if cpu_spike:
-                cpu = round(cpu_spike_val, 2)
+            mem_noise = 0.98 * mem_noise + mem_eps - 0.2 * mem_eps_prev
+            mem_eps_prev = mem_eps
+
+            db_noise = 0.85 * db_noise + db_eps - 0.4 * db_eps_prev
+            db_eps_prev = db_eps
+
+            # Seasonality and Server Spin-Up Curve
+            spin_up_factor = 1.0 - math.exp(-t / 30.0)
+            
+            cpu_seasonality = 10.0 * math.sin(t * 0.05) + 3.0 * math.cos(t * 0.12)
+            mem_seasonality = 4.0 * math.cos(t * 0.01)
+            db_seasonality = 15.0 * math.sin(t * 0.05)
+
+            normal_cpu = (cpu_base + cpu_seasonality) * spin_up_factor + cpu_noise
+            normal_mem = (mem_base + mem_seasonality) * spin_up_factor + mem_noise
+            normal_db = (db_base + db_seasonality) * spin_up_factor + db_noise
+
+            if in_anomaly:
+                # Anomaly event triggered: exponential decay from peak to normal
+                i_cpu = 0.35 ** anomaly_step
+                i_db = 0.50 ** anomaly_step
+                i_mem = 0.70 ** anomaly_step
+
+                # Peak targets
+                target_cpu = 96.0 + random.normalvariate(0, 0.5)
+                target_db = 750
+                target_mem = 92.0 + random.normalvariate(0, 0.2)
+
+                # Blended values
+                cpu_val = normal_cpu * (1.0 - i_cpu) + target_cpu * i_cpu
+                mem_val = normal_mem * (1.0 - i_mem) + target_mem * i_mem
+                db_val = normal_db * (1.0 - i_db) + target_db * i_db
+
+                anomaly_step += 1
+                if anomaly_step >= anomaly_duration:
+                    in_anomaly = False
+                    cycles_since_anomaly = 0
+                    next_anomaly_target = random.randint(20, 30)
             else:
-                cpu = round(random.uniform(20.0, 45.0), 2)
+                cpu_val = normal_cpu
+                mem_val = normal_mem
+                db_val = normal_db
 
-            if mem_spike:
-                mem = round(mem_spike_val, 2)
-            else:
-                mem = round(random.uniform(35.0, 55.0), 2)
-
-            if db_spike:
-                db = db_spike_val
-            else:
-                db = random.randint(15, 45)
+            # Clamping
+            cpu = round(max(0.0, min(100.0, cpu_val)), 2)
+            mem = round(max(0.0, min(100.0, mem_val)), 2)
+            db = max(0, int(db_val))
 
             current_point = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
