@@ -141,17 +141,19 @@ export default function Home() {
 
     if (mappedHistory.length === 0) {
       const currentVal = key === 'system_health' ? systemHealthVal : (latestMetric?.[key] ?? 0);
-      return { min: currentVal, max: currentVal, avg: currentVal };
+      return { min: currentVal, max: currentVal, avg: currentVal, volatility: 0 };
     }
     const vals = mappedHistory.map(h => h[key]).filter(v => v !== undefined && v !== null);
     if (vals.length === 0) {
       const currentVal = key === 'system_health' ? systemHealthVal : (latestMetric?.[key] ?? 0);
-      return { min: currentVal, max: currentVal, avg: currentVal };
+      return { min: currentVal, max: currentVal, avg: currentVal, volatility: 0 };
     }
     const min = Math.min(...vals);
     const max = Math.max(...vals);
     const avg = vals.reduce((sum, v) => sum + v, 0) / vals.length;
-    return { min, max, avg };
+    const variance = vals.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / vals.length;
+    const volatility = Math.sqrt(variance);
+    return { min, max, avg, volatility };
   };
 
   const cpuSeverity = getMetricSeverity(cpuVal, 'cpu_usage', !!latestMetric?.anomalies?.cpu_usage);
@@ -217,6 +219,39 @@ export default function Home() {
               <span className={`text-xl font-bold font-mono-tech ${cpuSeverity.colorClass}`}>%</span>
             </div>
           </div>
+          {/* Multi-Row Analytics Matrix Sub-Section */}
+          <div className="mt-4 pt-3 border-t border-slate-800/40">
+            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {/* [PEAK_LOAD] Badge */}
+              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
+                  {Math.round(cpuStats.max)}%
+                </span>
+              </div>
+
+              {/* [RUNNING_AVG] Badge */}
+              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
+                  {cpuStats.avg.toFixed(1)}%
+                </span>
+              </div>
+
+              {/* [VOLATILITY_INDEX] Badge */}
+              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
+                cpuStats.volatility > 8
+                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
+                  : 'bg-slate-900 text-slate-300 border-slate-800'
+              }`}>
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
+                <span className={`font-mono text-xs mt-0.5 ${cpuStats.volatility > 8 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
+                  {cpuStats.volatility.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
             <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
               <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
@@ -269,6 +304,39 @@ export default function Home() {
               <span className={`text-xl font-bold font-mono-tech ${memSeverity.colorClass}`}>%</span>
             </div>
           </div>
+          {/* Multi-Row Analytics Matrix Sub-Section */}
+          <div className="mt-4 pt-3 border-t border-slate-800/40">
+            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {/* [PEAK_LOAD] Badge */}
+              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
+                  {Math.round(memStats.max)}%
+                </span>
+              </div>
+
+              {/* [RUNNING_AVG] Badge */}
+              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
+                  {memStats.avg.toFixed(1)}%
+                </span>
+              </div>
+
+              {/* [VOLATILITY_INDEX] Badge */}
+              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
+                memStats.volatility > 3
+                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
+                  : 'bg-slate-900 text-slate-300 border-slate-800'
+              }`}>
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
+                <span className={`font-mono text-xs mt-0.5 ${memStats.volatility > 3 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
+                  {memStats.volatility.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
             <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
               <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
@@ -319,6 +387,39 @@ export default function Home() {
                 {dbVal !== 0 ? Math.round(dbVal) : '0'}
               </span>
               <span className={`text-lg font-bold font-mono-tech ${dbSeverity.colorClass}`}>CONNS</span>
+            </div>
+          </div>
+          {/* Multi-Row Analytics Matrix Sub-Section */}
+          <div className="mt-4 pt-3 border-t border-slate-800/40">
+            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {/* [PEAK_LOAD] Badge */}
+              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
+                  {Math.round(dbStats.max)}
+                </span>
+              </div>
+
+              {/* [RUNNING_AVG] Badge */}
+              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
+                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
+                  {dbStats.avg.toFixed(0)}
+                </span>
+              </div>
+
+              {/* [VOLATILITY_INDEX] Badge */}
+              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
+                dbStats.volatility > 20
+                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
+                  : 'bg-slate-900 text-slate-300 border-slate-800'
+              }`}>
+                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
+                <span className={`font-mono text-xs mt-0.5 ${dbStats.volatility > 20 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
+                  {dbStats.volatility.toFixed(2)}
+                </span>
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
