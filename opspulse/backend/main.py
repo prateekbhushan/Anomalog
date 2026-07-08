@@ -8,6 +8,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 from engine.forecaster import ResourceForecaster
+from engine.action_router import ActionRouter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ latest_forecasts = {
 }
 
 forecaster = ResourceForecaster()
+action_router = ActionRouter()
 
 # Direct Background Engine: Broadcasts mock data every 1 second directly to synced sockets
 async def start_force_telemetry_broadcast():
@@ -196,12 +198,16 @@ async def start_force_telemetry_broadcast():
                     except Exception as e:
                         logger.error(f"Error forecasting {key}: {e}")
 
+            # Run Automated Action Router to check anomalies/thresholds and simulate healing actions
+            action_logs = action_router.process_metrics(cpu, mem, db, anomalies)
+
             # Package payload
             payload = {
                 **current_point,
                 'anomalies': anomalies,
                 'alerts': alerts,
-                'predictions': latest_forecasts
+                'predictions': latest_forecasts,
+                'action_logs': action_logs
             }
             
             # Simulated storage flush log to keep frontend metrics tracking happy
@@ -246,7 +252,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "type": "history",
                 "data": history_buffer,
                 "alerts": [],
-                "predictions": latest_forecasts
+                "predictions": latest_forecasts,
+                "action_logs": action_router.all_logs
             }
             await websocket.send_text(json.dumps(initial_payload))
             

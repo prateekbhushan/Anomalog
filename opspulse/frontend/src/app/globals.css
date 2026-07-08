@@ -242,3 +242,21 @@ body {
 .neon-glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.15); }
 .neon-glow-green { box-shadow: 0 0 15px rgba(34, 197, 94, 0.15); }
 .neon-glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.15); }
+
+/* Premium Breathing Glow Animation for AI-SRE Active Badge */
+@keyframes sre-breathe {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.15), inset 0 0 2px rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.25);
+    background-color: rgba(6, 78, 59, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.55), inset 0 0 8px rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.65);
+    background-color: rgba(6, 78, 59, 0.35);
+  }
+}
+
+.animate-sre-breathe {
+  animation: sre-breathe 2.5s infinite ease-in-out;
+}

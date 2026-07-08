@@ -19,6 +19,7 @@ interface MetricsStore {
   history: Metric[];
   alerts: any[];
   predictions: any;
+  actionLogs: string[];
   setLatestMetric: (payload: any) => void;
 }
 
@@ -27,6 +28,7 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
   history: [],
   alerts: [],
   predictions: {},
+  actionLogs: [],
   setLatestMetric: (payload) => set((state) => {
     if (payload.type === 'history' && Array.isArray(payload.data)) {
       const historyMetrics = payload.data.map((p: any) => ({
@@ -43,7 +45,8 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
         latestMetric,
         history: historyMetrics.slice(-300),
         alerts: newAlerts,
-        predictions: payload.predictions || {}
+        predictions: payload.predictions || {},
+        actionLogs: Array.isArray(payload.action_logs) ? payload.action_logs : state.actionLogs
       };
     }
 
@@ -74,11 +77,20 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
         }
       }
 
+      let latestActionLogs = state.actionLogs;
+      for (let i = payload.length - 1; i >= 0; i--) {
+        if (payload[i].action_logs) {
+          latestActionLogs = payload[i].action_logs;
+          break;
+        }
+      }
+
       return {
         latestMetric,
         history: newHistory,
         alerts: newAlerts,
-        predictions: Object.keys(latestPredictions).length > 0 ? latestPredictions : state.predictions
+        predictions: Object.keys(latestPredictions).length > 0 ? latestPredictions : state.predictions,
+        actionLogs: latestActionLogs
       };
     }
 
@@ -98,7 +110,8 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
       latestMetric: metric,
       history: newHistory,
       alerts: newAlerts,
-      predictions: payload.predictions || {}
+      predictions: payload.predictions || {},
+      actionLogs: payload.action_logs || state.actionLogs
     };
   }),
 }));

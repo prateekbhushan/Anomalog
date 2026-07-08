@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react/jsx-no-comment-textnodes */
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { RealtimeChart } from '@/components/RealtimeChart';
 import { useMetricsSocket, useMetricsStore } from '@/hooks/useMetricsSocket';
 import { AntigravityCard } from '@/components/AntigravityCard';
@@ -89,6 +89,15 @@ export default function Home() {
 
   useMetricsSocket(wsUrl);
   const history = useMetricsStore(state => state.history);
+  const actionLogs = useMetricsStore((state: any) => state.actionLogs || []);
+  const terminalEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [actionLogs]);
+
 
   // Selector optimized to prevent new array references on every execution loop
   const alerts = useMetricsStore((state: any) => state.alerts);
@@ -184,8 +193,18 @@ export default function Home() {
         <h1 className="text-3xl font-extrabold tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
           AnomaLog // Predictive Telemetry
         </h1>
-        <div className="header-uptime bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono-tech tracking-wider">
-          SYS_STATUS: ACTIVE // {formatUptime(uptime)}
+        <div className="flex items-center gap-3">
+          {/* AI-SRE Active Badge with Breathing Animation */}
+          <div className="flex items-center gap-2 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono-tech tracking-wider animate-sre-breathe shadow-lg">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            AI-SRE AGENT: ACTIVE
+          </div>
+          <div className="header-uptime bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono-tech tracking-wider">
+            SYS_STATUS: ACTIVE // {formatUptime(uptime)}
+          </div>
         </div>
       </header>
 
@@ -749,6 +768,39 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Real-Time Action Resolution Terminal */}
+      <footer className="w-full bg-black/90 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl font-mono flex flex-col h-[220px] shadow-2xl relative overflow-hidden group hover:border-emerald-500/60 transition-all duration-300">
+        <div className="flex justify-between items-center border-b border-emerald-500/20 pb-2 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+            <span className="text-xs uppercase tracking-widest font-bold">// AI-SRE PLATFORM INCIDENT COMMAND CENTER</span>
+          </div>
+          <span className="text-[10px] text-emerald-500/60 font-semibold tracking-wider font-mono">STATUS: MONITORING_REMEDIATION</span>
+        </div>
+        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1 text-[11px] font-mono scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
+          {actionLogs.length === 0 ? (
+            <div className="text-emerald-500/50 italic py-2">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
+          ) : (
+            actionLogs.map((log: string, idx: number) => {
+              let colorClass = "text-emerald-400";
+              if (log.includes("[INCIDENT_DETECTED]")) {
+                colorClass = "text-rose-400 font-extrabold";
+              } else if (log.includes("[AI_AGENT_ORCHESTRATOR]")) {
+                colorClass = "text-cyan-400";
+              } else if (log.includes("[EXECUTION_SUCCESS]")) {
+                colorClass = "text-emerald-300 font-bold border-l-2 border-emerald-400 pl-2 bg-emerald-950/10 py-0.5";
+              }
+              return (
+                <div key={idx} className={`${colorClass} whitespace-pre-wrap`} style={{ contentVisibility: 'auto' }}>
+                  {log}
+                </div>
+              );
+            })
+          )}
+          <div ref={terminalEndRef} />
+        </div>
+      </footer>
     </main>
   );
 }
