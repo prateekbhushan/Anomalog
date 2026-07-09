@@ -81,6 +81,43 @@ const getSystemSeverity = (health: number): SeverityConfig => {
   return { level: 'danger', colorClass: 'text-red-500', bgClass: 'bg-red-950/40', borderClass: 'border-red-500/30', glowColor: 'red', statusText: 'CRITICAL_FAIL', glowShadow: 'rgba(239, 68, 68, 0.75)' };
 };
 
+function renderLogLine(log: string) {
+  // Regex to match [timestamp] [tag]: message
+  const matchWithTag = log.match(/^(\[\d{2}:\d{2}:\d{2}\])\s+(\[[A-Z_]+\])(.*)$/);
+  if (matchWithTag) {
+    const [_, timestamp, tag, message] = matchWithTag;
+    let tagClass = "text-emerald-400";
+    if (tag === "[INCIDENT_DETECTED]" || tag === "[CRITICAL]") {
+      tagClass = "text-rose-400 font-semibold tracking-wide animate-pulse";
+    } else if (tag === "[AI_AGENT_ORCHESTRATOR]") {
+      tagClass = "text-cyan-400 font-medium";
+    } else if (tag === "[EXECUTION_SUCCESS]") {
+      tagClass = "text-emerald-400 font-bold";
+    }
+    return (
+      <span className="flex items-center flex-wrap">
+        <span className="text-slate-500 font-mono text-xs mr-2">{timestamp}</span>
+        <span className={`${tagClass} mr-1`}>{tag}</span>
+        <span className="text-emerald-400">{message}</span>
+      </span>
+    );
+  }
+
+  // Fallback to match [timestamp] message
+  const matchJustTime = log.match(/^(\[\d{2}:\d{2}:\d{2}\])\s*(.*)$/);
+  if (matchJustTime) {
+    const [_, timestamp, message] = matchJustTime;
+    return (
+      <span className="flex items-center flex-wrap">
+        <span className="text-slate-500 font-mono text-xs mr-2">{timestamp}</span>
+        <span className="text-emerald-400">{message}</span>
+      </span>
+    );
+  }
+
+  return <span className="text-emerald-400">{log}</span>;
+}
+
 export default function Home() {
   // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
   const wsUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL
@@ -783,22 +820,18 @@ export default function Home() {
             <div className="text-emerald-500/50 italic py-2">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
           ) : (
             actionLogs.map((log: string, idx: number) => {
-              let colorClass = "text-emerald-400";
-              if (log.includes("[INCIDENT_DETECTED]")) {
-                colorClass = "text-rose-400 font-extrabold";
-              } else if (log.includes("[AI_AGENT_ORCHESTRATOR]")) {
-                colorClass = "text-cyan-400";
-              } else if (log.includes("[EXECUTION_SUCCESS]")) {
-                colorClass = "text-emerald-300 font-bold border-l-2 border-emerald-400 pl-2 bg-emerald-950/10 py-0.5";
+              let lineClass = "whitespace-pre-wrap py-0.5";
+              if (log.includes("[EXECUTION_SUCCESS]")) {
+                lineClass += " border-l-2 border-emerald-500/40 pl-2 bg-emerald-950/10";
               }
               return (
-                <div key={idx} className={`${colorClass} whitespace-pre-wrap`} style={{ contentVisibility: 'auto' }}>
-                  {log}
+                <div key={idx} className={lineClass} style={{ contentVisibility: 'auto' }}>
+                  {renderLogLine(log)}
                 </div>
               );
             })
           )}
-          <div ref={terminalEndRef} />
+          <div ref={terminalEndRef} className="h-0 w-0 opacity-0 pointer-events-none" aria-hidden="true" />
         </div>
       </footer>
     </main>

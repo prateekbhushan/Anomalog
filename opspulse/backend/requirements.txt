@@ -1,8 +1,8 @@
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
-redis==5.0.4
-asyncpg==0.29.0
-sqlalchemy==2.0.30
-scikit-learn==1.4.2
-statsmodels==0.14.2
-pandas==2.2.2
+fastapi
+uvicorn[standard]
+redis
+asyncpg
+sqlalchemy
+scikit-learn
+statsmodels
+pandas

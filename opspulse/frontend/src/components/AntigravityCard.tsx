@@ -57,7 +57,7 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
   return (
     <div className="w-full h-full flex flex-col">
       <div
-        className={`relative overflow-hidden w-full h-full rounded-xl border p-6 bg-[#111827] backdrop-blur-xl ${
+        className={`relative overflow-hidden w-full h-full rounded-xl border p-6 bg-[#111827] backdrop-blur-xl transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700 ${
           borderColors[glowColor]
         } ${glowShadows[glowColor]} ${severityClasses} ${className}`}
       >
