@@ -82,40 +82,48 @@ const getSystemSeverity = (health: number): SeverityConfig => {
 };
 
 function renderLogLine(log: string) {
-  // Regex to match [timestamp] [tag]: message
-  const matchWithTag = log.match(/^(\[\d{2}:\d{2}:\d{2}\])\s+(\[[A-Z_]+\])(.*)$/);
-  if (matchWithTag) {
-    const [_, timestamp, tag, message] = matchWithTag;
-    let tagClass = "text-emerald-400";
-    if (tag === "[INCIDENT_DETECTED]" || tag === "[CRITICAL]") {
-      tagClass = "text-rose-400 font-semibold tracking-wide animate-pulse";
-    } else if (tag === "[AI_AGENT_ORCHESTRATOR]") {
-      tagClass = "text-cyan-400 font-medium";
-    } else if (tag === "[EXECUTION_SUCCESS]") {
-      tagClass = "text-emerald-400 font-bold";
-    }
-    return (
-      <span className="flex items-center flex-wrap">
-        <span className="text-slate-500 font-mono text-xs mr-2">{timestamp}</span>
-        <span className={`${tagClass} mr-1`}>{tag}</span>
-        <span className="text-emerald-400">{message}</span>
-      </span>
-    );
-  }
+  const tokenRegex = /(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\]|\[INCIDENT_DETECTED\]|\[CRITICAL\]|\[AI_AGENT_ORCHESTRATOR\]|\[EXECUTION_SUCCESS\])/g;
+  const parts = log.split(tokenRegex);
 
-  // Fallback to match [timestamp] message
-  const matchJustTime = log.match(/^(\[\d{2}:\d{2}:\d{2}\])\s*(.*)$/);
-  if (matchJustTime) {
-    const [_, timestamp, message] = matchJustTime;
-    return (
-      <span className="flex items-center flex-wrap">
-        <span className="text-slate-500 font-mono text-xs mr-2">{timestamp}</span>
-        <span className="text-emerald-400">{message}</span>
-      </span>
-    );
-  }
-
-  return <span className="text-emerald-400">{log}</span>;
+  return (
+    <span className="flex items-center flex-wrap">
+      {parts.map((part, index) => {
+        if (/^(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\])$/.test(part)) {
+          return (
+            <span key={index} className="text-slate-500 font-mono text-xs mr-2">
+              {part}
+            </span>
+          );
+        }
+        if (part === "[INCIDENT_DETECTED]" || part === "[CRITICAL]") {
+          return (
+            <span key={index} className="text-rose-400 animate-pulse mr-1">
+              {part}
+            </span>
+          );
+        }
+        if (part === "[AI_AGENT_ORCHESTRATOR]") {
+          return (
+            <span key={index} className="text-cyan-400 mr-1">
+              {part}
+            </span>
+          );
+        }
+        if (part === "[EXECUTION_SUCCESS]") {
+          return (
+            <span key={index} className="text-emerald-400 font-bold mr-1">
+              {part}
+            </span>
+          );
+        }
+        return (
+          <span key={index} className="text-emerald-400">
+            {part}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 export default function Home() {
@@ -130,9 +138,7 @@ export default function Home() {
   const terminalEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (terminalEndRef.current) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [actionLogs]);
 
 
@@ -611,42 +617,48 @@ export default function Home() {
               {/* Individual Metrics Panel (1/3 width) */}
               <div className="flex flex-col gap-4">
                 {/* CPU */}
-                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-cyan-500/30 transition-all duration-300">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-mono-tech text-slate-400">// CPU</span>
-                    <span className={`text-xl font-bold font-mono-tech mt-1 ${cpuSeverity.colorClass}`}>{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
+                <div className="w-full flex flex-col">
+                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono-tech text-slate-400">// CPU</span>
+                      <span className={`text-xl font-bold font-mono-tech mt-1 ${cpuSeverity.colorClass}`}>{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
+                    </div>
+                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                      cpuSeverity.level !== 'normal' ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {cpuSeverity.statusText}
+                    </span>
                   </div>
-                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                    cpuSeverity.level !== 'normal' ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  }`}>
-                    {cpuSeverity.statusText}
-                  </span>
                 </div>
 
                 {/* Memory */}
-                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-emerald-500/30 transition-all duration-300">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-mono-tech text-slate-400">// RAM</span>
-                    <span className={`text-xl font-bold font-mono-tech mt-1 ${memSeverity.colorClass}`}>{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
+                <div className="w-full flex flex-col">
+                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono-tech text-slate-400">// RAM</span>
+                      <span className={`text-xl font-bold font-mono-tech mt-1 ${memSeverity.colorClass}`}>{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
+                    </div>
+                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                      memSeverity.level !== 'normal' ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {memSeverity.statusText}
+                    </span>
                   </div>
-                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                    memSeverity.level !== 'normal' ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  }`}>
-                    {memSeverity.statusText}
-                  </span>
                 </div>
 
                 {/* Connections */}
-                <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group hover:border-rose-500/30 transition-all duration-300">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-mono-tech text-slate-400">// DB POOL</span>
-                    <span className={`text-xl font-bold font-mono-tech mt-1 ${dbSeverity.colorClass}`}>{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
+                <div className="w-full flex flex-col">
+                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono-tech text-slate-400">// DB POOL</span>
+                      <span className={`text-xl font-bold font-mono-tech mt-1 ${dbSeverity.colorClass}`}>{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
+                    </div>
+                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
+                      dbSeverity.level !== 'normal' ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {dbSeverity.statusText}
+                    </span>
                   </div>
-                  <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                    dbSeverity.level !== 'normal' ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  }`}>
-                    {dbSeverity.statusText}
-                  </span>
                 </div>
               </div>
             </div>
