@@ -138,7 +138,7 @@ export default function Home() {
   const terminalEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [actionLogs]);
 
 
@@ -230,8 +230,10 @@ export default function Home() {
   });
 
   return (
-    <main className="min-h-screen w-full flex flex-col bg-[#050b14] p-6 gap-6 overflow-y-auto">
-      {/* Page Header */}
+    <main className="h-screen overflow-hidden flex flex-col bg-slate-950">
+      {/* Top Pane - Independent Analytics Workspace */}
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+        {/* Page Header */}
       <header className="flex justify-between items-center pb-4 border-b border-slate-800/60 mb-0 bg-[#111827] border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg">
         <h1 className="text-3xl font-extrabold tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
           AnomaLog // Predictive Telemetry
@@ -818,18 +820,20 @@ export default function Home() {
         </div>
       </div>
 
+      </div>
+
       {/* Real-Time Action Resolution Terminal */}
-      <footer className="w-full bg-black/90 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl font-mono flex flex-col h-[220px] shadow-2xl relative overflow-hidden group hover:border-emerald-500/60 transition-all duration-300">
-        <div className="flex justify-between items-center border-b border-emerald-500/20 pb-2 mb-3">
+      <footer className="h-64 border-t border-slate-800 bg-black/95 w-full flex flex-col text-emerald-400 relative overflow-hidden group transition-all duration-300">
+        <div className="flex justify-between items-center border-b border-slate-800/80 px-4 py-2 bg-black/40">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="text-xs uppercase tracking-widest font-bold">// AI-SRE PLATFORM INCIDENT COMMAND CENTER</span>
+            <span className="text-xs uppercase tracking-widest font-bold font-mono">// AI-SRE PLATFORM INCIDENT COMMAND CENTER</span>
           </div>
           <span className="text-[10px] text-emerald-500/60 font-semibold tracking-wider font-mono">STATUS: MONITORING_REMEDIATION</span>
         </div>
-        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1 text-[11px] font-mono scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
+        <div className="overflow-y-auto flex-1 p-4 font-mono text-sm overscroll-contain flex flex-col gap-1 scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
           {actionLogs.length === 0 ? (
-            <div className="text-emerald-500/50 italic py-2">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
+            <div className="text-emerald-500/50 italic py-2 font-mono">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
           ) : (
             actionLogs.map((log: string, idx: number) => {
               let lineClass = "whitespace-pre-wrap py-0.5";
