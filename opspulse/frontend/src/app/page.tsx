@@ -135,10 +135,17 @@ export default function Home() {
   useMetricsSocket(wsUrl);
   const history = useMetricsStore(state => state.history);
   const actionLogs = useMetricsStore((state: any) => state.actionLogs || []);
-  const terminalEndRef = useRef<HTMLDivElement | null>(null);
+  const terminalScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (terminalScrollRef.current) {
+      const container = terminalScrollRef.current;
+      // Smooth scroll inside this container only, without window context propagation
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [actionLogs]);
 
 
@@ -831,7 +838,7 @@ export default function Home() {
           </div>
           <span className="text-[10px] text-emerald-500/60 font-semibold tracking-wider font-mono">STATUS: MONITORING_REMEDIATION</span>
         </div>
-        <div className="overflow-y-auto flex-1 p-4 font-mono text-sm overscroll-contain flex flex-col gap-1 scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
+        <div ref={terminalScrollRef} className="overflow-y-auto flex-1 p-4 font-mono text-sm overscroll-contain flex flex-col gap-1 scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
           {actionLogs.length === 0 ? (
             <div className="text-emerald-500/50 italic py-2 font-mono">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
           ) : (
@@ -847,7 +854,6 @@ export default function Home() {
               );
             })
           )}
-          <div ref={terminalEndRef} className="h-0 w-0 opacity-0 pointer-events-none" aria-hidden="true" />
         </div>
       </footer>
     </main>
