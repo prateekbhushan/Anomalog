@@ -267,11 +267,11 @@ export default function Home() {
           glowColor={cpuSeverity.glowColor}
           isAnomaly={!!latestMetric?.anomalies?.cpu_usage}
           severity={cpuSeverity.level}
-          className="bg-[#111827] border border-slate-800 rounded-xl"
+          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// CPU UTILIZATION</span>
+              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// CPU UTILIZATION</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 cpuSeverity.level !== 'normal' 
                   ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} font-black tracking-wider animate-pulse` 
@@ -282,7 +282,7 @@ export default function Home() {
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${cpuSeverity.colorClass}`}
+                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
                 style={{ textShadow: `0 0 15px ${cpuSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
                 {cpuVal !== 0 ? Math.round(cpuVal) : '0'}
@@ -352,11 +352,11 @@ export default function Home() {
           glowColor={memSeverity.glowColor}
           isAnomaly={!!latestMetric?.anomalies?.memory_usage}
           severity={memSeverity.level}
-          className="bg-[#111827] border border-slate-800 rounded-xl"
+          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// MEMORY ALLOCATION</span>
+              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// MEMORY ALLOCATION</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 memSeverity.level !== 'normal' 
                   ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} font-black tracking-wider animate-pulse` 
@@ -367,7 +367,7 @@ export default function Home() {
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${memSeverity.colorClass}`}
+                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
                 style={{ textShadow: `0 0 15px ${memSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
                 {memVal !== 0 ? Math.round(memVal) : '0'}
@@ -437,11 +437,11 @@ export default function Home() {
           glowColor={dbSeverity.glowColor}
           isAnomaly={!!latestMetric?.anomalies?.db_connections}
           severity={dbSeverity.level}
-          className="bg-[#111827] border border-slate-800 rounded-xl"
+          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
+              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 dbSeverity.level !== 'normal' 
                   ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} font-black tracking-wider animate-pulse` 
@@ -452,7 +452,7 @@ export default function Home() {
             </div>
             <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
               <span 
-                className={`text-5xl font-black font-mono-tech tracking-tight transition-all duration-300 ${dbSeverity.colorClass}`}
+                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
                 style={{ textShadow: `0 0 15px ${dbSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
               >
                 {dbVal !== 0 ? Math.round(dbVal) : '0'}
@@ -570,12 +570,12 @@ export default function Home() {
                   glowColor={systemSeverity.glowColor}
                   isAnomaly={!!latestMetric?.anomalies?.cpu_usage || !!latestMetric?.anomalies?.memory_usage || !!latestMetric?.anomalies?.db_connections}
                   severity={systemSeverity.level}
-                  className="bg-[#111827] border border-slate-800 rounded-xl"
+                  className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
                 >
                   <div className="flex flex-col gap-2 h-full justify-between">
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono-tech">// OVERALL SYSTEM HEALTH</span>
+                        <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// OVERALL SYSTEM HEALTH</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                           systemSeverity.level !== 'normal' 
                             ? `${systemSeverity.bgClass} ${systemSeverity.colorClass} ${systemSeverity.borderClass} font-black tracking-wider animate-pulse` 
@@ -589,7 +589,7 @@ export default function Home() {
 
                     <div className="my-6 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-4 rounded-lg w-max border-l border-slate-800/40">
                       <span 
-                        className={`text-6xl font-black font-mono-tech tracking-tight transition-all duration-300 ${systemSeverity.colorClass}`}
+                        className="text-6xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
                         style={{ textShadow: `0 0 15px ${systemSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
                       >
                         {systemHealthVal}
@@ -627,10 +627,10 @@ export default function Home() {
               <div className="flex flex-col gap-4">
                 {/* CPU */}
                 <div className="w-full flex flex-col">
-                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono-tech text-slate-400">// CPU</span>
-                      <span className={`text-xl font-bold font-mono-tech mt-1 ${cpuSeverity.colorClass}`}>{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
+                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// CPU</span>
+                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
                     </div>
                     <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
                       cpuSeverity.level !== 'normal' ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -642,10 +642,10 @@ export default function Home() {
 
                 {/* Memory */}
                 <div className="w-full flex flex-col">
-                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono-tech text-slate-400">// RAM</span>
-                      <span className={`text-xl font-bold font-mono-tech mt-1 ${memSeverity.colorClass}`}>{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
+                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// RAM</span>
+                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
                     </div>
                     <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
                       memSeverity.level !== 'normal' ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -657,10 +657,10 @@ export default function Home() {
 
                 {/* Connections */}
                 <div className="w-full flex flex-col">
-                  <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden shadow-lg group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700">
+                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono-tech text-slate-400">// DB POOL</span>
-                      <span className={`text-xl font-bold font-mono-tech mt-1 ${dbSeverity.colorClass}`}>{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
+                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// DB POOL</span>
+                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
                     </div>
                     <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
                       dbSeverity.level !== 'normal' ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -678,7 +678,7 @@ export default function Home() {
               dataKey="system_health"
               color="#00e5ff"
               history={systemHealthHistory}
-              containerClassName="h-[40vh] min-h-[350px] w-full bg-[#111827] border border-slate-800 rounded-xl p-6 relative flex flex-col shadow-lg"
+              containerClassName="h-[40vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
               canvasClassName="flex-1 w-full min-h-[300px]"
             />
           </div>
@@ -690,7 +690,7 @@ export default function Home() {
             dataKey="cpu_usage"
             color="#00e5ff"
             history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-[#111827] border border-slate-800 rounded-xl p-6 relative flex flex-col shadow-lg"
+            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
             canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}
@@ -701,7 +701,7 @@ export default function Home() {
             dataKey="memory_usage"
             color="#00ff66"
             history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-[#111827] border border-slate-800 rounded-xl p-6 relative flex flex-col shadow-lg"
+            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
             canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}
@@ -712,7 +712,7 @@ export default function Home() {
             dataKey="db_connections"
             color="#ff0055"
             history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-[#111827] border border-slate-800 rounded-xl p-6 relative flex flex-col shadow-lg"
+            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
             canvasClassName="flex-1 w-full min-h-[300px]"
           />
         )}

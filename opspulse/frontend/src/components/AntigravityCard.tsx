@@ -19,15 +19,15 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
 }) => {
   // Border and shadow glow colors based on props
   const borderColors = {
-    cyan: 'border-slate-800 hover:border-cyan-500/40',
-    green: 'border-slate-800 hover:border-emerald-500/40',
-    red: 'border-slate-800 hover:border-rose-500/40',
-    rose: 'border-slate-800 hover:border-rose-500/40',
-    emerald: 'border-slate-800 hover:border-emerald-500/40',
-    yellow: 'border-slate-800 hover:border-amber-500/40',
-    orange: 'border-slate-800 hover:border-orange-500/40',
-    amber: 'border-slate-800 hover:border-amber-500/40',
-    none: 'border-slate-800 hover:border-slate-700',
+    cyan: 'hover:border-cyan-500/40',
+    green: 'hover:border-emerald-500/40',
+    red: 'hover:border-rose-500/40',
+    rose: 'hover:border-rose-500/40',
+    emerald: 'hover:border-emerald-500/40',
+    yellow: 'hover:border-amber-500/40',
+    orange: 'hover:border-orange-500/40',
+    amber: 'hover:border-amber-500/40',
+    none: 'hover:border-slate-600',
   };
 
   const glowShadows = {
@@ -39,7 +39,7 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
     yellow: 'shadow-[0_0_30px_rgba(245,158,11,0.02)] hover:shadow-[0_0_40px_rgba(245,158,11,0.08)]',
     orange: 'shadow-[0_0_30px_rgba(249,115,22,0.02)] hover:shadow-[0_0_40px_rgba(249,115,22,0.08)]',
     amber: 'shadow-[0_0_30px_rgba(245,158,11,0.02)] hover:shadow-[0_0_40px_rgba(245,158,11,0.08)]',
-    none: 'shadow-2xl',
+    none: '',
   };
 
   // Dynamic pulsing animations based on severity
@@ -57,7 +57,7 @@ export const AntigravityCard: React.FC<AntigravityCardProps> = ({
   return (
     <div className="w-full h-full flex flex-col">
       <div
-        className={`relative overflow-hidden w-full h-full rounded-xl border p-6 bg-[#111827] backdrop-blur-xl transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 hover:border-slate-700 ${
+        className={`relative overflow-hidden w-full h-full rounded-xl border p-6 bg-slate-900/90 backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 border-slate-750 hover:border-slate-600 ${
           borderColors[glowColor]
         } ${glowShadows[glowColor]} ${severityClasses} ${className}`}
       >

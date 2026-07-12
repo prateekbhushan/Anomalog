@@ -236,6 +236,10 @@ body {
   .perspective-1000 {
     perspective: 1000px;
   }
+
+  .border-slate-750 {
+    border-color: #293548;
+  }
 }
 
 /* Neon Drop-Shadows Variants */

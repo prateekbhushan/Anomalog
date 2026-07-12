@@ -43,7 +43,6 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
         {
           label: "Actual",
           stroke: color,
-          fill: color + '10',
           width: 2,
         },
         {
@@ -65,12 +64,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
           show: false,
         }
       ],
-      bands: [
-        {
-          series: [3, 4],
-          fill: color + '0F', // Shaded confidence interval band
-        }
-      ]
+      bands: []
     };
 
     const initialData: [number[], number[], number[], number[], number[]] = [[], [], [], [], []];
@@ -204,7 +198,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
       {/* Parent container with strict CSS constraint to prevent infinite layout feedback loop */}
       <div style={{ position: 'relative', width: '100%', height: '350px', overflow: 'hidden' }}>
         <div 
-          className={canvasClassName || "chart-wrapper"} 
+          className={`${canvasClassName || "chart-wrapper"} bg-black`} 
           ref={chartRef} 
           style={{ width: '100%', height: '100%' }} 
         />
