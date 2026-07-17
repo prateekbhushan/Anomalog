@@ -82,7 +82,7 @@ const getSystemSeverity = (health: number): SeverityConfig => {
 };
 
 function renderLogLine(log: string) {
-  const tokenRegex = /(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\]|\[INCIDENT_DETECTED\]|\[CRITICAL\]|\[AI_AGENT_ORCHESTRATOR\]|\[EXECUTION_SUCCESS\])/g;
+  const tokenRegex = /(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\]|\[INCIDENT_DETECTED\]|\[CRITICAL\]|\[AI_AGENT_ORCHESTRATOR\]|\[AI_DIAGNOSTIC_ENGINE\]|\[EXECUTION_SUCCESS\]|\[AI_ORCHESTRATOR_EXECUTOR\])/g;
   const parts = log.split(tokenRegex);
 
   return (
@@ -109,6 +109,20 @@ function renderLogLine(log: string) {
             </span>
           );
         }
+        if (part === "[AI_DIAGNOSTIC_ENGINE]") {
+          return (
+            <span key={index} className="text-cyan-400 font-medium mr-1">
+              {part}
+            </span>
+          );
+        }
+        if (part === "[AI_ORCHESTRATOR_EXECUTOR]") {
+          return (
+            <span key={index} className="text-emerald-400 font-extrabold mr-1 animate-pulse">
+              {part}
+            </span>
+          );
+        }
         if (part === "[EXECUTION_SUCCESS]") {
           return (
             <span key={index} className="text-emerald-400 font-bold mr-1">
@@ -117,7 +131,7 @@ function renderLogLine(log: string) {
           );
         }
         return (
-          <span key={index} className="text-emerald-400">
+          <span key={index} className={log.includes("[AI_DIAGNOSTIC_ENGINE]") ? "text-cyan-400 font-medium" : (log.includes("[AI_ORCHESTRATOR_EXECUTOR]") ? "text-emerald-300 font-mono" : "text-emerald-400")}>
             {part}
           </span>
         );
@@ -134,29 +148,28 @@ export default function Home() {
 
   useMetricsSocket(wsUrl);
   const history = useMetricsStore(state => state.history);
+
   const actionLogs = useMetricsStore((state: any) => state.actionLogs || []);
   const terminalScrollRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (terminalScrollRef.current) {
-      const container = terminalScrollRef.current;
-      // Smooth scroll inside this container only, without window context propagation
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth'
-      });
-    }
-  }, [actionLogs]);
-
+  const getTimestamp = () => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+  };
 
   // Selector optimized to prevent new array references on every execution loop
   const alerts = useMetricsStore((state: any) => state.alerts);
   const predictions = useMetricsStore((state: any) => state.predictions);
   const latestMetric = useMetricsStore((state: any) => state.latestMetric);
 
-  const cpuVal = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
-  const memVal = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
-  const dbVal = latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? latestMetric.db_connections : 0;
+  const baseCpu = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
+  const baseMem = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
+  const baseDb = latestMetric?.db_connections !== undefined && latestMetric?.db_connections !== null ? latestMetric.db_connections : 0;
+
+  const cpuVal = baseCpu;
+  const memVal = baseMem;
+  const dbVal = baseDb;
 
   const systemHealthVal = Math.max(0, Math.min(100, Math.round(
     100 - (cpuVal * 0.4 + memVal * 0.4 + Math.min(dbVal, 1000) * 0.02) -
@@ -165,6 +178,50 @@ export default function Home() {
 
   // Safe fallback to handle arrays cleanly during mapping loops
   const safeAlerts = Array.isArray(alerts) ? alerts : [];
+
+  const isCpuAnomaly = !!(latestMetric?.anomalies?.cpu_usage || safeAlerts.some((a: any) => a.metric === 'cpu_usage'));
+  const isMemAnomaly = !!(latestMetric?.anomalies?.memory_usage || safeAlerts.some((a: any) => a.metric === 'memory_usage'));
+  const isDbAnomaly = !!(latestMetric?.anomalies?.db_connections || safeAlerts.some((a: any) => a.metric === 'db_connections'));
+
+  // Dynamic AI Risk Weight Allocation
+  const getRiskWeight = (
+    value: number,
+    isAnomaly: boolean,
+    warningThreshold: number,
+    criticalThreshold: number,
+    baseMin: number
+  ) => {
+    if (isAnomaly || value >= criticalThreshold) {
+      const range = 100 - 76;
+      const progress = Math.min(1, (value - criticalThreshold) / (criticalThreshold * 0.5 || 1));
+      return Math.round(76 + Math.max(0, progress * range));
+    }
+    if (value >= warningThreshold) {
+      const range = 75 - 50;
+      const progress = Math.min(1, (value - warningThreshold) / (criticalThreshold - warningThreshold));
+      return Math.round(50 + progress * range);
+    }
+    const range = 49 - baseMin;
+    const progress = Math.min(1, value / warningThreshold);
+    return Math.round(baseMin + progress * range);
+  };
+
+  const dbRisk = getRiskWeight(dbVal, isDbAnomaly, 250, 450, 15);
+  const memRisk = getRiskWeight(memVal, isMemAnomaly, 60, 75, 12);
+  const netRisk = getRiskWeight(cpuVal, isCpuAnomaly, 60, 75, 10);
+  const threadRisk = getRiskWeight(cpuVal, isCpuAnomaly, 65, 85, 8);
+
+  const combinedLogs = actionLogs;
+
+  useEffect(() => {
+    if (terminalScrollRef.current) {
+      const container = terminalScrollRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [combinedLogs.length]);
 
   // Tab state routing engine
   const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'database' | 'system'>('system');
@@ -563,9 +620,9 @@ export default function Home() {
         {activeTab === 'system' && (
           <div className="flex flex-col gap-6 w-full">
             {/* Top row of system tab: Composite score + individual values */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Composite Health Box (2/3 width) */}
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Composite Health Box (4/12 width) */}
+              <div className="lg:col-span-4">
                 <AntigravityCard
                   glowColor={systemSeverity.glowColor}
                   isAnomaly={!!latestMetric?.anomalies?.cpu_usage || !!latestMetric?.anomalies?.memory_usage || !!latestMetric?.anomalies?.db_connections}
@@ -623,8 +680,8 @@ export default function Home() {
                 </AntigravityCard>
               </div>
 
-              {/* Individual Metrics Panel (1/3 width) */}
-              <div className="flex flex-col gap-4">
+              {/* Individual Metrics Panel (2/12 width) */}
+              <div className="lg:col-span-2 flex flex-col gap-4">
                 {/* CPU */}
                 <div className="w-full flex flex-col">
                   <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
@@ -668,6 +725,187 @@ export default function Home() {
                       {dbSeverity.statusText}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* AI PROACTIVE RISK RADAR (3/12 width) */}
+              <div className="lg:col-span-3 bg-slate-900/90 border border-slate-750 p-4 rounded-lg flex flex-col justify-between h-full">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-cyan-400 font-bold text-xs tracking-wider uppercase font-mono-tech">// AI PROACTIVE RISK RADAR</h3>
+                    <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded font-mono-tech">
+                      RCA_ENG: ACTIVE
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {/* Database Pool Load */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Database Pool Load</span>
+                        {(() => {
+                          const prefix = "DB Pool";
+                          if (dbRisk > 75) {
+                            return (
+                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
+                                {prefix}: {dbRisk}% Critical Risk
+                              </span>
+                            );
+                          }
+                          if (dbRisk >= 50) {
+                            return (
+                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
+                                {prefix}: {dbRisk}% Warning
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                              {prefix}: {dbRisk}% Nominal
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
+                        <div 
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            dbRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : dbRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} 
+                          style={{ width: `${dbRisk}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Heap Memory Trajectory */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Heap Memory Trajectory</span>
+                        {(() => {
+                          const prefix = "Heap Mem";
+                          if (memRisk > 75) {
+                            return (
+                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
+                                {prefix}: {memRisk}% Critical Risk
+                              </span>
+                            );
+                          }
+                          if (memRisk >= 50) {
+                            return (
+                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
+                                {prefix}: {memRisk}% Warning
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                              {prefix}: {memRisk}% Nominal
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
+                        <div 
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            memRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : memRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} 
+                          style={{ width: `${memRisk}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Network Request Saturation */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Network Saturation</span>
+                        {(() => {
+                          const prefix = "Network Sat";
+                          if (netRisk > 75) {
+                            return (
+                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
+                                {prefix}: {netRisk}% Critical Risk
+                              </span>
+                            );
+                          }
+                          if (netRisk >= 50) {
+                            return (
+                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
+                                {prefix}: {netRisk}% Warning
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                              {prefix}: {netRisk}% Nominal
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
+                        <div 
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            netRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : netRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} 
+                          style={{ width: `${netRisk}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Thread Pool Utilization */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Thread Pool Utilization</span>
+                        {(() => {
+                          const prefix = "Thread Pool";
+                          if (threadRisk > 75) {
+                            return (
+                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
+                                {prefix}: {threadRisk}% Critical Risk
+                              </span>
+                            );
+                          }
+                          if (threadRisk >= 50) {
+                            return (
+                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
+                                {prefix}: {threadRisk}% Warning
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                              {prefix}: {threadRisk}% Nominal
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
+                        <div 
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            threadRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : threadRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} 
+                          style={{ width: `${threadRisk}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ORCHESTRATION MODE PANEL (3/12 width) */}
+              <div className="lg:col-span-3 border border-slate-800 bg-slate-900/90 p-4 rounded-lg flex flex-col justify-between h-full">
+                <div>
+                  <h3 className="text-slate-400 font-bold text-xs tracking-wider uppercase font-mono-tech">ORCHESTRATION MODE</h3>
+                  <div className="flex flex-col gap-4 mt-2">
+                    <span className="text-[10px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">
+                      MANUAL OVERRIDE MODE
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-800/60 flex flex-col gap-2">
+                  <button 
+                    className="w-full bg-gradient-to-r from-rose-950/60 to-red-950/60 hover:from-rose-900/80 hover:to-red-900/80 border border-rose-500/40 hover:border-rose-500 text-rose-300 hover:text-white font-mono-tech text-[10.5px] font-bold tracking-widest py-2.5 px-3 rounded transition-all duration-200 active:scale-[0.98] shadow-md uppercase"
+                  >
+                    SIMULATE FAILURE WAVE
+                  </button>
                 </div>
               </div>
             </div>
@@ -839,10 +1077,10 @@ export default function Home() {
           <span className="text-[10px] text-emerald-500/60 font-semibold tracking-wider font-mono">STATUS: MONITORING_REMEDIATION</span>
         </div>
         <div ref={terminalScrollRef} className="overflow-y-auto flex-1 p-4 font-mono text-sm overscroll-contain flex flex-col gap-1 scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
-          {actionLogs.length === 0 ? (
+          {combinedLogs.length === 0 ? (
             <div className="text-emerald-500/50 italic py-2 font-mono">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
           ) : (
-            actionLogs.map((log: string, idx: number) => {
+            combinedLogs.map((log: string, idx: number) => {
               let lineClass = "whitespace-pre-wrap py-0.5";
               if (log.includes("[EXECUTION_SUCCESS]")) {
                 lineClass += " border-l-2 border-emerald-500/40 pl-2 bg-emerald-950/10";
