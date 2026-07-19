@@ -82,7 +82,7 @@ const getSystemSeverity = (health: number): SeverityConfig => {
 };
 
 function renderLogLine(log: string) {
-  const tokenRegex = /(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\]|\[INCIDENT_DETECTED\]|\[CRITICAL\]|\[AI_AGENT_ORCHESTRATOR\]|\[AI_DIAGNOSTIC_ENGINE\]|\[EXECUTION_SUCCESS\]|\[AI_ORCHESTRATOR_EXECUTOR\])/g;
+  const tokenRegex = /(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [A-Z]+\]|\[\d{2}:\d{2}:\d{2}\]|\[INCIDENT_DETECTED\]|\[CRITICAL\]|\[AI_AGENT_ORCHESTRATOR\]|\[AI_DIAGNOSTIC_ENGINE\]|\[AI_PREDICTIVE_ENGINE\]|\[EXECUTION_SUCCESS\]|\[AI_ORCHESTRATOR_EXECUTOR\])/g;
   const parts = log.split(tokenRegex);
 
   return (
@@ -116,6 +116,13 @@ function renderLogLine(log: string) {
             </span>
           );
         }
+        if (part === "[AI_PREDICTIVE_ENGINE]") {
+          return (
+            <span key={index} className="text-fuchsia-400 font-bold mr-1 animate-pulse">
+              {part}
+            </span>
+          );
+        }
         if (part === "[AI_ORCHESTRATOR_EXECUTOR]") {
           return (
             <span key={index} className="text-emerald-400 font-extrabold mr-1 animate-pulse">
@@ -131,7 +138,7 @@ function renderLogLine(log: string) {
           );
         }
         return (
-          <span key={index} className={log.includes("[AI_DIAGNOSTIC_ENGINE]") ? "text-cyan-400 font-medium" : (log.includes("[AI_ORCHESTRATOR_EXECUTOR]") ? "text-emerald-300 font-mono" : "text-emerald-400")}>
+          <span key={index} className={log.includes("[AI_DIAGNOSTIC_ENGINE]") ? "text-cyan-400 font-medium" : (log.includes("[AI_PREDICTIVE_ENGINE]") ? "text-fuchsia-300 font-semibold" : (log.includes("[AI_ORCHESTRATOR_EXECUTOR]") ? "text-emerald-300 font-mono" : "text-emerald-400"))}>
             {part}
           </span>
         );

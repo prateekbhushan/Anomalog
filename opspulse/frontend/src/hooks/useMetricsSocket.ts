@@ -20,8 +20,27 @@ interface MetricsStore {
   alerts: any[];
   predictions: any;
   actionLogs: string[];
+  isAnomalyPredicted: boolean;
+  metricWindow: { cpu: number; memory: number }[];
+  customLogs: string[];
   setLatestMetric: (payload: any) => void;
 }
+
+const mergeLogs = (backendLogs: string[], customLogs: string[]): string[] => {
+  const allLogs = [...(backendLogs || []), ...customLogs];
+  const uniqueLogs = Array.from(new Set(allLogs));
+  
+  const getLogTime = (log: string): number => {
+    const match = log.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) UTC\]/);
+    if (match) {
+      const isoStr = match[1].replace(' ', 'T') + 'Z';
+      return new Date(isoStr).getTime();
+    }
+    return 0;
+  };
+  
+  return uniqueLogs.sort((a, b) => getLogTime(a) - getLogTime(b));
+};
 
 export const useMetricsStore = create<MetricsStore>((set) => ({
   latestMetric: null,
@@ -29,6 +48,9 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
   alerts: [],
   predictions: {},
   actionLogs: [],
+  isAnomalyPredicted: false,
+  metricWindow: [],
+  customLogs: [],
   setLatestMetric: (payload) => set((state) => {
     if (payload.type === 'history' && Array.isArray(payload.data)) {
       const historyMetrics = payload.data.map((p: any) => ({
@@ -41,12 +63,46 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
       const latestMetric = historyMetrics[historyMetrics.length - 1] || null;
       const incomingAlerts = Array.isArray(payload.alerts) ? payload.alerts : [];
       const newAlerts = [...incomingAlerts, ...state.alerts].slice(0, 20);
+      
+      const newWindow = historyMetrics.slice(-5).map((h: any) => ({
+        cpu: h.cpu_usage,
+        memory: h.memory_usage
+      }));
+
+      let isAnomalyPredicted = state.isAnomalyPredicted;
+      let customLogs = state.customLogs;
+
+      if (newWindow.length >= 4) {
+        const current = newWindow[newWindow.length - 1];
+        const prev3 = newWindow[newWindow.length - 4];
+        const cpuDiff = current.cpu - prev3.cpu;
+        const memDiff = current.memory - prev3.memory;
+        const shouldPredict = cpuDiff > 15 || memDiff > 15;
+
+        if (shouldPredict && !state.isAnomalyPredicted) {
+          isAnomalyPredicted = true;
+          const now = new Date();
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          const ts = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+          const newLog = `[${ts}] [AI_PREDICTIVE_ENGINE]: High growth trajectory detected. Forecasting system failure condition within 15 cycles.`;
+          customLogs = [...state.customLogs, newLog];
+        } else if (!shouldPredict) {
+          isAnomalyPredicted = false;
+        }
+      }
+
+      const incomingLogs = Array.isArray(payload.action_logs) ? payload.action_logs : state.actionLogs;
+      const mergedLogs = mergeLogs(incomingLogs, customLogs);
+
       return {
         latestMetric,
         history: historyMetrics.slice(-300),
         alerts: newAlerts,
         predictions: payload.predictions || {},
-        actionLogs: Array.isArray(payload.action_logs) ? payload.action_logs : state.actionLogs
+        actionLogs: mergedLogs,
+        isAnomalyPredicted,
+        metricWindow: newWindow,
+        customLogs
       };
     }
 
@@ -85,12 +141,44 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
         }
       }
 
+      const newWindow = [...state.metricWindow, ...newMetrics.map((h: any) => ({
+        cpu: h.cpu_usage,
+        memory: h.memory_usage
+      }))].slice(-5);
+
+      let isAnomalyPredicted = state.isAnomalyPredicted;
+      let customLogs = state.customLogs;
+
+      if (newWindow.length >= 4) {
+        const current = newWindow[newWindow.length - 1];
+        const prev3 = newWindow[newWindow.length - 4];
+        const cpuDiff = current.cpu - prev3.cpu;
+        const memDiff = current.memory - prev3.memory;
+        const shouldPredict = cpuDiff > 15 || memDiff > 15;
+
+        if (shouldPredict && !state.isAnomalyPredicted) {
+          isAnomalyPredicted = true;
+          const now = new Date();
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          const ts = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+          const newLog = `[${ts}] [AI_PREDICTIVE_ENGINE]: High growth trajectory detected. Forecasting system failure condition within 15 cycles.`;
+          customLogs = [...state.customLogs, newLog];
+        } else if (!shouldPredict) {
+          isAnomalyPredicted = false;
+        }
+      }
+
+      const mergedLogs = mergeLogs(latestActionLogs, customLogs);
+
       return {
         latestMetric,
         history: newHistory,
         alerts: newAlerts,
         predictions: Object.keys(latestPredictions).length > 0 ? latestPredictions : state.predictions,
-        actionLogs: latestActionLogs
+        actionLogs: mergedLogs,
+        isAnomalyPredicted,
+        metricWindow: newWindow,
+        customLogs
       };
     }
 
@@ -106,12 +194,42 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
     const newAlerts = [...incomingAlerts, ...state.alerts].slice(0, 20);
     const newHistory = [...state.history, metric].slice(-300);
 
+    const newWindow = [...state.metricWindow, { cpu: metric.cpu_usage, memory: metric.memory_usage }].slice(-5);
+
+    let isAnomalyPredicted = state.isAnomalyPredicted;
+    let customLogs = state.customLogs;
+
+    if (newWindow.length >= 4) {
+      const current = newWindow[newWindow.length - 1];
+      const prev3 = newWindow[newWindow.length - 4];
+      const cpuDiff = current.cpu - prev3.cpu;
+      const memDiff = current.memory - prev3.memory;
+      const shouldPredict = cpuDiff > 15 || memDiff > 15;
+
+      if (shouldPredict && !state.isAnomalyPredicted) {
+        isAnomalyPredicted = true;
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const ts = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+        const newLog = `[${ts}] [AI_PREDICTIVE_ENGINE]: High growth trajectory detected. Forecasting system failure condition within 15 cycles.`;
+        customLogs = [...state.customLogs, newLog];
+      } else if (!shouldPredict) {
+        isAnomalyPredicted = false;
+      }
+    }
+
+    const incomingLogs = payload.action_logs || state.actionLogs;
+    const mergedLogs = mergeLogs(incomingLogs, customLogs);
+
     return {
       latestMetric: metric,
       history: newHistory,
       alerts: newAlerts,
       predictions: payload.predictions || {},
-      actionLogs: payload.action_logs || state.actionLogs
+      actionLogs: mergedLogs,
+      isAnomalyPredicted,
+      metricWindow: newWindow,
+      customLogs
     };
   }),
 }));
