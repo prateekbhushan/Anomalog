@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { RealtimeChart } from '@/components/RealtimeChart';
 import { useMetricsSocket, useMetricsStore } from '@/hooks/useMetricsSocket';
 import { AntigravityCard } from '@/components/AntigravityCard';
+
 function parseAlertMessage(message: string) {
   const regex = /3σ Drift:\s*(.*?)\s+spiked to\s+([\d.]+)\s*\(μ:\s*([\d.]+),\s*σ:\s*([\d.]+)\)/i;
   const match = message.match(regex);
@@ -16,7 +17,9 @@ function parseAlertMessage(message: string) {
     };
   }
   return null;
-}interface SeverityConfig {
+}
+
+interface SeverityConfig {
   level: 'normal' | 'warning' | 'critical' | 'danger';
   colorClass: string;
   bgClass: string;
@@ -148,7 +151,6 @@ function renderLogLine(log: string) {
 }
 
 export default function Home() {
-  // 🚀 FIXED: Fallback explicitly synced with backend API router endpoint path
   const wsUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL
     ? process.env.NEXT_PUBLIC_WS_URL
     : 'ws://127.0.0.1:8000/ws/metrics';
@@ -159,16 +161,23 @@ export default function Home() {
   const actionLogs = useMetricsStore((state: any) => state.actionLogs || []);
   const terminalScrollRef = useRef<HTMLDivElement | null>(null);
 
-  const getTimestamp = () => {
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
-  };
-
-  // Selector optimized to prevent new array references on every execution loop
   const alerts = useMetricsStore((state: any) => state.alerts);
   const predictions = useMetricsStore((state: any) => state.predictions);
   const latestMetric = useMetricsStore((state: any) => state.latestMetric);
+  const triggerFailureWave = useMetricsStore((state: any) => state.triggerFailureWave);
+  const isAutonomous = useMetricsStore((state: any) => state.isAutonomous);
+
+  // Side Interface Drawer State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<'anomalies' | 'forecasts' | 'risk' | 'terminal'>('anomalies');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsDrawerOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const baseCpu = latestMetric?.cpu_usage !== undefined && latestMetric?.cpu_usage !== null ? latestMetric.cpu_usage : 0;
   const baseMem = latestMetric?.memory_usage !== undefined && latestMetric?.memory_usage !== null ? latestMetric.memory_usage : 0;
@@ -183,14 +192,12 @@ export default function Home() {
     ((latestMetric?.anomalies?.cpu_usage ? 10 : 0) + (latestMetric?.anomalies?.memory_usage ? 10 : 0) + (latestMetric?.anomalies?.db_connections ? 10 : 0))
   )));
 
-  // Safe fallback to handle arrays cleanly during mapping loops
   const safeAlerts = Array.isArray(alerts) ? alerts : [];
 
   const isCpuAnomaly = !!(latestMetric?.anomalies?.cpu_usage || safeAlerts.some((a: any) => a.metric === 'cpu_usage'));
   const isMemAnomaly = !!(latestMetric?.anomalies?.memory_usage || safeAlerts.some((a: any) => a.metric === 'memory_usage'));
   const isDbAnomaly = !!(latestMetric?.anomalies?.db_connections || safeAlerts.some((a: any) => a.metric === 'db_connections'));
 
-  // Dynamic AI Risk Weight Allocation
   const getRiskWeight = (
     value: number,
     isAnomaly: boolean,
@@ -230,10 +237,7 @@ export default function Home() {
     }
   }, [combinedLogs.length]);
 
-  // Tab state routing engine
   const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'database' | 'system'>('system');
-
-  // Live connection uptime tracker
   const [uptime, setUptime] = useState(0);
 
   useEffect(() => {
@@ -301,806 +305,593 @@ export default function Home() {
   });
 
   return (
-    <main className="h-screen overflow-hidden flex flex-col bg-slate-950">
-      {/* Top Pane - Independent Analytics Workspace */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-        {/* Page Header */}
-      <header className="flex justify-between items-center pb-4 border-b border-slate-800/60 mb-0 bg-[#111827] border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg">
-        <h1 className="text-3xl font-extrabold tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-          AnomaLog // Predictive Telemetry
-        </h1>
-        <div className="flex items-center gap-3">
-          {/* AI-SRE Active Badge with Breathing Animation */}
-          <div className="flex items-center gap-2 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono-tech tracking-wider animate-sre-breathe shadow-lg">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* 🚀 Main Clean Dashboard Container */}
+      <div className="flex-1 p-6 md:p-8 flex flex-col gap-6 max-w-[1800px] w-full mx-auto">
+        
+        {/* Top Header */}
+        <header className="flex flex-wrap justify-between items-center bg-[#0e1424]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-2xl">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-cyan-400">
+              AnomaLog // Telemetry
+            </h1>
+            <span className="text-xs bg-slate-800/80 text-slate-400 px-2.5 py-1 rounded-md font-mono-tech border border-slate-700/50 hidden sm:inline-block">
+              CORE v2.4
             </span>
-            AI-SRE AGENT: ACTIVE
           </div>
-          <div className="header-uptime bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono-tech tracking-wider">
-            SYS_STATUS: ACTIVE // {formatUptime(uptime)}
-          </div>
-        </div>
-      </header>
 
-      {/* Telemetry Grid Matrix */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-        {/* CPU Usage Card */}
-        <AntigravityCard
-          glowColor={cpuSeverity.glowColor}
-          isAnomaly={!!latestMetric?.anomalies?.cpu_usage}
-          severity={cpuSeverity.level}
-          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
-        >
-          <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 px-3.5 py-1.5 rounded-xl text-xs font-semibold font-mono-tech tracking-wider shadow-lg">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              AI-SRE: ACTIVE
+            </div>
+
+            <div className="bg-cyan-950/30 border border-cyan-500/30 text-cyan-400 px-3.5 py-1.5 rounded-xl text-xs font-semibold font-mono-tech tracking-wider hidden sm:block">
+              SYS_ACTIVE // {formatUptime(uptime)}
+            </div>
+
+            {/* ⚡ Drawer Trigger Button */}
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-cyan-950/80 to-blue-950/80 hover:from-cyan-900 hover:to-blue-900 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono-tech text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 shadow-[0_0_15px_rgba(6,182,212,0.2)] active:scale-95 ml-2"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+              </span>
+              ⚡ ANALYTICS & TERMINAL
+            </button>
+          </div>
+        </header>
+
+        {/* 📊 Key Status Cards Matrix */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full">
+          {/* CPU Card */}
+          <AntigravityCard
+            glowColor={cpuSeverity.glowColor}
+            isAnomaly={!!latestMetric?.anomalies?.cpu_usage}
+            severity={cpuSeverity.level}
+            className="bg-[#0e1424]/80 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// CPU UTILIZATION</span>
+              <span className="text-slate-400 font-semibold text-xs tracking-wider uppercase font-mono-tech">// CPU UTIL</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 cpuSeverity.level !== 'normal' 
-                  ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} font-black animate-pulse` 
                   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
               }`}>
                 {cpuSeverity.statusText}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
-              <span 
-                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
-                style={{ textShadow: `0 0 15px ${cpuSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
-              >
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-semibold font-mono tracking-tight text-white">
                 {cpuVal !== 0 ? Math.round(cpuVal) : '0'}
               </span>
-              <span className={`text-xl font-bold font-mono-tech ${cpuSeverity.colorClass}`}>%</span>
+              <span className={`text-lg font-bold font-mono-tech ${cpuSeverity.colorClass}`}>%</span>
             </div>
-          </div>
-          {/* Multi-Row Analytics Matrix Sub-Section */}
-          <div className="mt-4 pt-3 border-t border-slate-800/40">
-            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {/* [PEAK_LOAD] Badge */}
-              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
-                  {Math.round(cpuStats.max)}%
-                </span>
-              </div>
+            <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-between text-[10px] text-slate-400 font-mono-tech">
+              <span>AVG: {cpuStats.avg.toFixed(1)}%</span>
+              <span>PEAK: {Math.round(cpuStats.max)}%</span>
+            </div>
+          </AntigravityCard>
 
-              {/* [RUNNING_AVG] Badge */}
-              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
-                  {cpuStats.avg.toFixed(1)}%
-                </span>
-              </div>
-
-              {/* [VOLATILITY_INDEX] Badge */}
-              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
-                cpuStats.volatility > 8
-                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
-                  : 'bg-slate-900 text-slate-300 border-slate-800'
-              }`}>
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
-                <span className={`font-mono text-xs mt-0.5 ${cpuStats.volatility > 8 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
-                  {cpuStats.volatility.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(cpuStats.min)}%</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(cpuStats.max)}%</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{cpuStats.avg.toFixed(1)}%</span>
-            </div>
-            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
-              cpuSeverity.level !== 'normal' 
-                ? `${cpuSeverity.bgClass} ${cpuSeverity.borderClass} shadow-[0_0_10px_${cpuSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
-                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
-            }`}>
-              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${cpuSeverity.level !== 'normal' ? cpuSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
-              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${cpuSeverity.level !== 'normal' ? cpuSeverity.colorClass : 'text-cyan-400'}`}>{cpuSeverity.level}</span>
-            </div>
-          </div>
-        </AntigravityCard>
-
-        {/* Memory Allocation Card */}
-        <AntigravityCard
-          glowColor={memSeverity.glowColor}
-          isAnomaly={!!latestMetric?.anomalies?.memory_usage}
-          severity={memSeverity.level}
-          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
-        >
-          <div className="flex flex-col gap-2">
+          {/* Memory Card */}
+          <AntigravityCard
+            glowColor={memSeverity.glowColor}
+            isAnomaly={!!latestMetric?.anomalies?.memory_usage}
+            severity={memSeverity.level}
+            className="bg-[#0e1424]/80 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// MEMORY ALLOCATION</span>
+              <span className="text-slate-400 font-semibold text-xs tracking-wider uppercase font-mono-tech">// RAM ALLOC</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 memSeverity.level !== 'normal' 
-                  ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} font-black animate-pulse` 
                   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
               }`}>
                 {memSeverity.statusText}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
-              <span 
-                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
-                style={{ textShadow: `0 0 15px ${memSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
-              >
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-semibold font-mono tracking-tight text-white">
                 {memVal !== 0 ? Math.round(memVal) : '0'}
               </span>
-              <span className={`text-xl font-bold font-mono-tech ${memSeverity.colorClass}`}>%</span>
+              <span className={`text-lg font-bold font-mono-tech ${memSeverity.colorClass}`}>%</span>
             </div>
-          </div>
-          {/* Multi-Row Analytics Matrix Sub-Section */}
-          <div className="mt-4 pt-3 border-t border-slate-800/40">
-            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {/* [PEAK_LOAD] Badge */}
-              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
-                  {Math.round(memStats.max)}%
-                </span>
-              </div>
+            <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-between text-[10px] text-slate-400 font-mono-tech">
+              <span>AVG: {memStats.avg.toFixed(1)}%</span>
+              <span>PEAK: {Math.round(memStats.max)}%</span>
+            </div>
+          </AntigravityCard>
 
-              {/* [RUNNING_AVG] Badge */}
-              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
-                  {memStats.avg.toFixed(1)}%
-                </span>
-              </div>
-
-              {/* [VOLATILITY_INDEX] Badge */}
-              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
-                memStats.volatility > 3
-                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
-                  : 'bg-slate-900 text-slate-300 border-slate-800'
-              }`}>
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
-                <span className={`font-mono text-xs mt-0.5 ${memStats.volatility > 3 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
-                  {memStats.volatility.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(memStats.min)}%</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(memStats.max)}%</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{memStats.avg.toFixed(1)}%</span>
-            </div>
-            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
-              memSeverity.level !== 'normal' 
-                ? `${memSeverity.bgClass} ${memSeverity.borderClass} shadow-[0_0_10px_${memSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
-                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
-            }`}>
-              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${memSeverity.level !== 'normal' ? memSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
-              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${memSeverity.level !== 'normal' ? memSeverity.colorClass : 'text-cyan-400'}`}>{memSeverity.level}</span>
-            </div>
-          </div>
-        </AntigravityCard>
-
-        {/* Active Connections Card */}
-        <AntigravityCard
-          glowColor={dbSeverity.glowColor}
-          isAnomaly={!!latestMetric?.anomalies?.db_connections}
-          severity={dbSeverity.level}
-          className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
-        >
-          <div className="flex flex-col gap-2">
+          {/* DB Pool Card */}
+          <AntigravityCard
+            glowColor={dbSeverity.glowColor}
+            isAnomaly={!!latestMetric?.anomalies?.db_connections}
+            severity={dbSeverity.level}
+            className="bg-[#0e1424]/80 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// ACTIVE DATABASE POOL</span>
+              <span className="text-slate-400 font-semibold text-xs tracking-wider uppercase font-mono-tech">// DB POOL</span>
               <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
                 dbSeverity.level !== 'normal' 
-                  ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} font-black tracking-wider animate-pulse` 
+                  ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} font-black animate-pulse` 
                   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
               }`}>
                 {dbSeverity.statusText}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-2 rounded-lg w-max border-l border-slate-800/40">
-              <span 
-                className="text-5xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
-                style={{ textShadow: `0 0 15px ${dbSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
-              >
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-semibold font-mono tracking-tight text-white">
                 {dbVal !== 0 ? Math.round(dbVal) : '0'}
               </span>
-              <span className={`text-lg font-bold font-mono-tech ${dbSeverity.colorClass}`}>CONNS</span>
+              <span className={`text-sm font-bold font-mono-tech ${dbSeverity.colorClass}`}>CONNS</span>
             </div>
-          </div>
-          {/* Multi-Row Analytics Matrix Sub-Section */}
-          <div className="mt-4 pt-3 border-t border-slate-800/40">
-            <span className="text-[10px] font-semibold font-mono-tech text-slate-500 uppercase tracking-widest">// PRECISION STATISTICS</span>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {/* [PEAK_LOAD] Badge */}
-              <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 p-2 rounded flex flex-col justify-between items-center shadow-[0_0_8px_rgba(245,158,11,0.05)]">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">PEAK LOAD</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-amber-400">
-                  {Math.round(dbStats.max)}
-                </span>
-              </div>
+            <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-between text-[10px] text-slate-400 font-mono-tech">
+              <span>AVG: {Math.round(dbStats.avg)}</span>
+              <span>PEAK: {Math.round(dbStats.max)}</span>
+            </div>
+          </AntigravityCard>
 
-              {/* [RUNNING_AVG] Badge */}
-              <div className="bg-slate-900 text-slate-300 border border-slate-800 p-2 rounded flex flex-col justify-between items-center shadow-md">
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">RUNNING AVG (μ)</span>
-                <span className="font-mono text-xs font-black mt-0.5 text-slate-300">
-                  {dbStats.avg.toFixed(0)}
-                </span>
-              </div>
-
-              {/* [VOLATILITY_INDEX] Badge */}
-              <div className={`p-2 rounded flex flex-col justify-between items-center border transition-all duration-300 ${
-                dbStats.volatility > 20
-                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse'
-                  : 'bg-slate-900 text-slate-300 border-slate-800'
+          {/* Overall Health Card */}
+          <AntigravityCard
+            glowColor={systemSeverity.glowColor}
+            isAnomaly={!!latestMetric?.anomalies?.cpu_usage || !!latestMetric?.anomalies?.memory_usage || !!latestMetric?.anomalies?.db_connections}
+            severity={systemSeverity.level}
+            className="bg-[#0e1424]/80 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 font-semibold text-xs tracking-wider uppercase font-mono-tech">// SYS HEALTH</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
+                systemSeverity.level !== 'normal' 
+                  ? `${systemSeverity.bgClass} ${systemSeverity.colorClass} ${systemSeverity.borderClass} font-black animate-pulse` 
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
               }`}>
-                <span className="text-[8px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">VOLATILITY</span>
-                <span className={`font-mono text-xs mt-0.5 ${dbStats.volatility > 20 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
-                  {dbStats.volatility.toFixed(2)}
+                {systemSeverity.statusText}
+              </span>
+            </div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-semibold font-mono tracking-tight text-white">
+                {systemHealthVal}
+              </span>
+              <span className={`text-lg font-bold font-mono-tech ${systemSeverity.colorClass}`}>%</span>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-between text-[10px] text-slate-400 font-mono-tech">
+              <span>AVG: {systemHealthStats.avg.toFixed(1)}%</span>
+              <span>MIN: {Math.round(systemHealthStats.min)}%</span>
+            </div>
+          </AntigravityCard>
+
+          {/* Failure Wave Trigger Card */}
+          <div className="bg-[#0e1424]/90 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+            <div>
+              <span className="text-slate-400 font-bold text-xs tracking-wider uppercase font-mono-tech">ORCHESTRATION</span>
+              <div className="mt-1">
+                <span className="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded font-mono-tech font-bold">
+                  MANUAL OVERRIDE
                 </span>
               </div>
             </div>
+            <button 
+              onClick={() => triggerFailureWave?.()}
+              className="w-full mt-4 bg-gradient-to-r from-rose-950/80 to-red-950/80 hover:from-rose-900 hover:to-red-900 border border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white font-mono-tech text-[11px] font-bold tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 active:scale-[0.98] shadow-md uppercase"
+            >
+              SIMULATE FAILURE WAVE
+            </button>
           </div>
-          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-800/60">
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.min)}</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.max)}</span>
-            </div>
-            <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-              <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG</span>
-              <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(dbStats.avg)}</span>
-            </div>
-            <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
-              dbSeverity.level !== 'normal' 
-                ? `${dbSeverity.bgClass} ${dbSeverity.borderClass} shadow-[0_0_10px_${dbSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
-                : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
-            }`}>
-              <span className={`text-[9px] font-mono-tech uppercase font-semibold ${dbSeverity.level !== 'normal' ? dbSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
-              <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${dbSeverity.level !== 'normal' ? dbSeverity.colorClass : 'text-cyan-400'}`}>{dbSeverity.level}</span>
+        </div>
+
+        {/* 📈 Clean Navigation & Massive Hero Chart */}
+        <div className="flex flex-col gap-4 w-full flex-1">
+          <div className="flex justify-between items-center flex-wrap gap-3">
+            <nav className="bg-[#0e1424] border border-slate-800 rounded-2xl p-1.5 flex gap-2 w-max shadow-xl">
+              <button
+                onClick={() => setActiveTab('system')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'system'
+                  ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-300 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
+                  }`}
+              >
+                // System Health
+              </button>
+              <button
+                onClick={() => setActiveTab('cpu')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'cpu'
+                  ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-300 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
+                  }`}
+              >
+                // CPU Telemetry
+              </button>
+              <button
+                onClick={() => setActiveTab('memory')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'memory'
+                  ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-300 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
+                  }`}
+              >
+                // Memory Allocation
+              </button>
+              <button
+                onClick={() => setActiveTab('database')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'database'
+                  ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-300 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
+                  }`}
+              >
+                // Database Pool
+              </button>
+            </nav>
+
+            <div className="flex items-center gap-2 text-xs font-mono-tech text-slate-400 bg-[#0e1424] border border-slate-800 px-4 py-2 rounded-2xl">
+              <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              <span>SAMPLING RATE: 100MS HIGH-VELOCITY</span>
             </div>
           </div>
-        </AntigravityCard>
+
+          {/* Hero Chart Container */}
+          <div className="w-full flex-1 min-h-[580px]">
+            {activeTab === 'system' && (
+              <RealtimeChart
+                title="System Health Score Trend Graph (Realtime)"
+                dataKey="system_health"
+                color="#00e5ff"
+                history={systemHealthHistory}
+                height={560}
+                containerClassName="w-full bg-[#080c14] border border-slate-800/90 rounded-3xl p-6 shadow-2xl relative"
+                canvasClassName="w-full"
+              />
+            )}
+
+            {activeTab === 'cpu' && (
+              <RealtimeChart
+                title="CPU Telemetry Graph (Realtime)"
+                dataKey="cpu_usage"
+                color="#00e5ff"
+                history={history}
+                height={560}
+                containerClassName="w-full bg-[#080c14] border border-slate-800/90 rounded-3xl p-6 shadow-2xl relative"
+                canvasClassName="w-full"
+              />
+            )}
+
+            {activeTab === 'memory' && (
+              <RealtimeChart
+                title="Memory Allocation Graph (Realtime)"
+                dataKey="memory_usage"
+                color="#00ff66"
+                history={history}
+                height={560}
+                containerClassName="w-full bg-[#080c14] border border-slate-800/90 rounded-3xl p-6 shadow-2xl relative"
+                canvasClassName="w-full"
+              />
+            )}
+
+            {activeTab === 'database' && (
+              <RealtimeChart
+                title="Database Connection Pool Graph (Realtime)"
+                dataKey="db_connections"
+                color="#ff0055"
+                history={history}
+                height={560}
+                containerClassName="w-full bg-[#080c14] border border-slate-800/90 rounded-3xl p-6 shadow-2xl relative"
+                canvasClassName="w-full"
+              />
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Cyberpunk Navigation Menu Bar */}
-      <nav className="bg-[#111827] border border-slate-800 rounded-xl p-1.5 flex gap-2 w-max shadow-xl">
-        <button
-          onClick={() => setActiveTab('system')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'system'
-            ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
-            : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
-            }`}
-        >
-          // System Health
-        </button>
-        <button
-          onClick={() => setActiveTab('cpu')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'cpu'
-            ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
-            : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
-            }`}
-        >
-          // CPU Telemetry
-        </button>
-        <button
-          onClick={() => setActiveTab('memory')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'memory'
-            ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
-            : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
-            }`}
-        >
-          // Memory Allocation
-        </button>
-        <button
-          onClick={() => setActiveTab('database')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider uppercase transition-all duration-200 border ${activeTab === 'database'
-            ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-400 font-bold'
-            : 'text-slate-400 hover:text-slate-200 bg-slate-900/20 hover:bg-slate-800/30 border-transparent'
-            }`}
-        >
-          // Database Pool
-        </button>
-      </nav>
+      {/* 🗂️ SLIDE-OVER SIDE DRAWER INTERFACE */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop Blur Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
+            onClick={() => setIsDrawerOpen(false)}
+          />
 
-      {/* Focused Component Toggling Layer */}
-      <div className="flex-1 flex flex-col min-h-[350px] w-full">
-        {activeTab === 'system' && (
-          <div className="flex flex-col gap-6 w-full">
-            {/* Top row of system tab: Composite score + individual values */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Composite Health Box (4/12 width) */}
-              <div className="lg:col-span-4">
-                <AntigravityCard
-                  glowColor={systemSeverity.glowColor}
-                  isAnomaly={!!latestMetric?.anomalies?.cpu_usage || !!latestMetric?.anomalies?.memory_usage || !!latestMetric?.anomalies?.db_connections}
-                  severity={systemSeverity.level}
-                  className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl"
-                >
-                  <div className="flex flex-col gap-2 h-full justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// OVERALL SYSTEM HEALTH</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono-tech border ${
-                          systemSeverity.level !== 'normal' 
-                            ? `${systemSeverity.bgClass} ${systemSeverity.colorClass} ${systemSeverity.borderClass} font-black tracking-wider animate-pulse` 
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
-                        }`}>
-                          {systemSeverity.statusText}
+          {/* Right Slide-Over Panel */}
+          <aside className="relative z-50 w-full max-w-3xl bg-[#090d16] border-l border-slate-800 shadow-2xl flex flex-col h-full overflow-hidden">
+            
+            {/* Drawer Header */}
+            <div className="p-6 border-b border-slate-800 bg-[#0e1424] flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-extrabold text-white tracking-wider uppercase font-mono-tech flex items-center gap-2">
+                  <span className="text-cyan-400">⚡</span> Detailed Telemetry & Command Center
+                </h2>
+                <p className="text-xs text-slate-400 font-mono-tech mt-1">
+                  Full precision matrices, 3σ drift logs, ML vector forecasts, & terminal.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white p-2 rounded-xl border border-slate-700 transition-all text-sm font-mono font-bold"
+                title="Close (Esc)"
+              >
+                ✕ ESC
+              </button>
+            </div>
+
+            {/* Drawer Navigation Tabs */}
+            <div className="flex border-b border-slate-800 bg-[#0b0f19] px-6 gap-2 pt-3">
+              <button
+                onClick={() => setDrawerTab('anomalies')}
+                className={`pb-3 px-4 text-xs font-bold tracking-wider uppercase font-mono-tech border-b-2 transition-all ${
+                  drawerTab === 'anomalies'
+                    ? 'border-cyan-400 text-cyan-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📊 3Σ Drift Anomalies
+              </button>
+              <button
+                onClick={() => setDrawerTab('forecasts')}
+                className={`pb-3 px-4 text-xs font-bold tracking-wider uppercase font-mono-tech border-b-2 transition-all ${
+                  drawerTab === 'forecasts'
+                    ? 'border-cyan-400 text-cyan-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🔮 ML Vector Forecasts
+              </button>
+              <button
+                onClick={() => setDrawerTab('risk')}
+                className={`pb-3 px-4 text-xs font-bold tracking-wider uppercase font-mono-tech border-b-2 transition-all ${
+                  drawerTab === 'risk'
+                    ? 'border-cyan-400 text-cyan-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🎯 RCA Risk Radar
+              </button>
+              <button
+                onClick={() => setDrawerTab('terminal')}
+                className={`pb-3 px-4 text-xs font-bold tracking-wider uppercase font-mono-tech border-b-2 transition-all ${
+                  drawerTab === 'terminal'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                💻 Incident Terminal
+              </button>
+            </div>
+
+            {/* Drawer Body Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Tab 1: 3Σ Drift Anomalies */}
+              {drawerTab === 'anomalies' && (
+                <div className="flex flex-col gap-6">
+                  {/* Detailed Precision Stats Grid */}
+                  <div className="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-lg">
+                    <h3 className="text-cyan-400 text-xs font-bold uppercase tracking-wider font-mono-tech mb-4">
+                      // PRECISION STATISTICAL MATRICES
+                    </h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* CPU Stats */}
+                      <div className="bg-[#0b0f19] p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[9px] text-slate-500 font-mono-tech uppercase">CPU PEAK / AVG</span>
+                        <span className="font-mono text-sm font-bold text-white mt-1">
+                          {Math.round(cpuStats.max)}% / {cpuStats.avg.toFixed(1)}%
+                        </span>
+                        <span className="text-[9px] text-cyan-400 font-mono mt-1">VOLATILITY: {cpuStats.volatility.toFixed(2)}</span>
+                      </div>
+                      {/* Mem Stats */}
+                      <div className="bg-[#0b0f19] p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[9px] text-slate-500 font-mono-tech uppercase">MEM PEAK / AVG</span>
+                        <span className="font-mono text-sm font-bold text-white mt-1">
+                          {Math.round(memStats.max)}% / {memStats.avg.toFixed(1)}%
+                        </span>
+                        <span className="text-[9px] text-emerald-400 font-mono mt-1">VOLATILITY: {memStats.volatility.toFixed(2)}</span>
+                      </div>
+                      {/* DB Stats */}
+                      <div className="bg-[#0b0f19] p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[9px] text-slate-500 font-mono-tech uppercase">DB PEAK / AVG</span>
+                        <span className="font-mono text-sm font-bold text-white mt-1">
+                          {Math.round(dbStats.max)} / {Math.round(dbStats.avg)}
+                        </span>
+                        <span className="text-[9px] text-rose-400 font-mono mt-1">VOLATILITY: {dbStats.volatility.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3-Sigma Anomaly Drift Table */}
+                  <div className="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-lg">
+                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                      <h3 className="text-rose-400 text-xs font-bold tracking-wider uppercase font-mono-tech">
+                        // Statistical Anomalies (3Σ Mathematical Drift)
+                      </h3>
+                      <span className="text-[10px] bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30 font-mono-tech font-bold">LIVE</span>
+                    </div>
+
+                    {safeAlerts.length === 0 ? (
+                      <div className="text-slate-400 text-xs italic p-4 border border-dashed border-slate-800 rounded-xl font-mono-tech text-center">
+                        ✓ System stable. No 3-sigma mathematical drift detected in current window.
+                      </div>
+                    ) : (
+                      <table className="w-full text-left font-mono-tech text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-500 uppercase">
+                            <th className="pb-2">TIME</th>
+                            <th className="pb-2">METRIC</th>
+                            <th className="pb-2 text-right">VALUE</th>
+                            <th className="pb-2 text-right">MEAN (μ)</th>
+                            <th className="pb-2 text-right">STD (σ)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {safeAlerts.map((alert: any, idx: number) => {
+                            const parsed = parseAlertMessage(alert.message);
+                            const timeStr = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'NOW';
+                            if (parsed) {
+                              return (
+                                <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/30">
+                                  <td className="py-2.5 text-slate-400">{timeStr}</td>
+                                  <td className="py-2.5 font-bold text-rose-400 uppercase">{parsed.metric}</td>
+                                  <td className="py-2.5 text-right text-white font-black">{parsed.value}</td>
+                                  <td className="py-2.5 text-right text-slate-300">{parsed.mean}</td>
+                                  <td className="py-2.5 text-right text-slate-400">{parsed.std}</td>
+                                </tr>
+                              );
+                            }
+                            return (
+                              <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/30">
+                                <td className="py-2.5 text-slate-400">{timeStr}</td>
+                                <td className="py-2.5 font-bold text-rose-400 uppercase">{alert.metric || 'SYSTEM'}</td>
+                                <td colSpan={3} className="py-2.5 text-white">{alert.message}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Predictive ML Forecasts */}
+              {drawerTab === 'forecasts' && (
+                <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col gap-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <h3 className="text-cyan-400 text-xs font-bold uppercase font-mono-tech tracking-wider">
+                      // Predictive ML Autoregressive Vector Forecasts
+                    </h3>
+                    <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30 font-mono-tech">
+                      95% CONFIDENCE INTERVAL
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center bg-[#0b0f19] border border-slate-800 p-3 rounded-xl">
+                      <span className="text-xs font-mono-tech text-slate-300 font-semibold">CPU Vector Forecast</span>
+                      <div className="bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 font-bold px-3 py-1 rounded text-xs font-mono">
+                        {predictions?.cpu_usage?.values?.[0] !== undefined ? `${predictions.cpu_usage.values[0].toFixed(1)}%` : 'STABLE NOMINAL'}
+                      </div>
+                    </div>
+                    {predictions?.memory_usage?.values?.[0] !== undefined && (
+                      <div className="flex justify-between items-center bg-[#0b0f19] border border-slate-800 p-3 rounded-xl">
+                        <span className="text-xs font-mono-tech text-slate-300 font-semibold">Memory Vector Forecast</span>
+                        <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 font-bold px-3 py-1 rounded text-xs font-mono">
+                          {predictions.memory_usage.values[0].toFixed(1)}%
+                        </div>
+                      </div>
+                    )}
+                    {predictions?.db_connections?.values?.[0] !== undefined && (
+                      <div className="flex justify-between items-center bg-[#0b0f19] border border-slate-800 p-3 rounded-xl">
+                        <span className="text-xs font-mono-tech text-slate-300 font-semibold">Database Connection Vector Forecast</span>
+                        <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 font-bold px-3 py-1 rounded text-xs font-mono">
+                          {predictions.db_connections.values[0].toFixed(0)} CONNS
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: RCA Risk Radar */}
+              {drawerTab === 'risk' && (
+                <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col gap-4">
+                  <h3 className="text-cyan-400 text-xs font-bold uppercase font-mono-tech tracking-wider pb-2 border-b border-slate-800">
+                    // AI PROACTIVE RISK RADAR & RCA ENGINE
+                  </h3>
+                  
+                  <div className="flex flex-col gap-4">
+                    {/* DB Pool */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono-tech">
+                        <span className="text-slate-300 font-semibold">Database Pool Load</span>
+                        <span className={dbRisk > 75 ? "text-rose-400 font-bold" : dbRisk >= 50 ? "text-amber-400" : "text-emerald-400"}>
+                          Risk: {dbRisk}%
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-2">// Weighted telemetry composite. Active anomalies trigger metric penalties.</p>
-                    </div>
-
-                    <div className="my-6 flex items-baseline gap-2 bg-gradient-to-r from-slate-900/60 via-slate-900/10 to-transparent p-4 rounded-lg w-max border-l border-slate-800/40">
-                      <span 
-                        className="text-6xl transition-all duration-300 text-slate-100 font-semibold font-mono tracking-tight"
-                        style={{ textShadow: `0 0 15px ${systemSeverity.glowShadow.replace('0.75', '0.45').replace('0.6', '0.45').replace('0.5', '0.45')}` }}
-                      >
-                        {systemHealthVal}
-                      </span>
-                      <span className={`text-2xl font-bold font-mono-tech ${systemSeverity.colorClass}`}>%</span>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-800/60">
-                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MIN HEALTH</span>
-                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(systemHealthStats.min)}%</span>
-                      </div>
-                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">MAX HEALTH</span>
-                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{Math.round(systemHealthStats.max)}%</span>
-                      </div>
-                      <div className="bg-cyan-950/20 border border-cyan-500/30 p-2 rounded text-center flex flex-col justify-between items-center shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-                        <span className="text-[9px] text-cyan-300/70 font-mono-tech uppercase font-semibold">AVG HEALTH</span>
-                        <span className="text-cyan-400 font-mono text-xs font-black mt-1">{systemHealthStats.avg.toFixed(1)}%</span>
-                      </div>
-                      <div className={`p-2 rounded text-center flex flex-col justify-between items-center transition-all duration-300 ${
-                        systemSeverity.level !== 'normal' 
-                          ? `${systemSeverity.bgClass} ${systemSeverity.borderClass} shadow-[0_0_10px_${systemSeverity.glowShadow.replace('0.75', '0.25').replace('0.6', '0.25').replace('0.5', '0.25')}]`
-                          : 'bg-cyan-950/20 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
-                      }`}>
-                        <span className={`text-[9px] font-mono-tech uppercase font-semibold ${systemSeverity.level !== 'normal' ? systemSeverity.colorClass : 'text-cyan-300/70'}`}>STATUS</span>
-                        <span className={`font-mono text-[9px] px-1 py-0.5 rounded font-extrabold mt-1 inline-block uppercase text-center ${systemSeverity.level !== 'normal' ? systemSeverity.colorClass : 'text-cyan-400'}`}>{systemSeverity.level}</span>
-                      </div>
-                    </div>
-                  </div>
-                </AntigravityCard>
-              </div>
-
-              {/* Individual Metrics Panel (2/12 width) */}
-              <div className="lg:col-span-2 flex flex-col gap-4">
-                {/* CPU */}
-                <div className="w-full flex flex-col">
-                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
-                    <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// CPU</span>
-                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{cpuVal !== 0 ? Math.round(cpuVal) : '0'}%</span>
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                      cpuSeverity.level !== 'normal' ? `${cpuSeverity.bgClass} ${cpuSeverity.colorClass} ${cpuSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    }`}>
-                      {cpuSeverity.statusText}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Memory */}
-                <div className="w-full flex flex-col">
-                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
-                    <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// RAM</span>
-                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{memVal !== 0 ? Math.round(memVal) : '0'}%</span>
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                      memSeverity.level !== 'normal' ? `${memSeverity.bgClass} ${memSeverity.colorClass} ${memSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    }`}>
-                      {memSeverity.statusText}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Connections */}
-                <div className="w-full flex flex-col">
-                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-750 rounded-xl p-4 flex justify-between items-center relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-slate-600">
-                    <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium text-xs tracking-wider uppercase font-mono-tech">// DB POOL</span>
-                      <span className="text-xl font-semibold font-mono mt-1 text-slate-100">{dbVal !== 0 ? Math.round(dbVal) : '0'} conns</span>
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono-tech border uppercase ${
-                      dbSeverity.level !== 'normal' ? `${dbSeverity.bgClass} ${dbSeverity.colorClass} ${dbSeverity.borderClass} animate-pulse` : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    }`}>
-                      {dbSeverity.statusText}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* AI PROACTIVE RISK RADAR (3/12 width) */}
-              <div className="lg:col-span-3 bg-slate-900/90 border border-slate-750 p-4 rounded-lg flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-cyan-400 font-bold text-xs tracking-wider uppercase font-mono-tech">// AI PROACTIVE RISK RADAR</h3>
-                    <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded font-mono-tech">
-                      RCA_ENG: ACTIVE
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {/* Database Pool Load */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Database Pool Load</span>
-                        {(() => {
-                          const prefix = "DB Pool";
-                          if (dbRisk > 75) {
-                            return (
-                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
-                                {prefix}: {dbRisk}% Critical Risk
-                              </span>
-                            );
-                          }
-                          if (dbRisk >= 50) {
-                            return (
-                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
-                                {prefix}: {dbRisk}% Warning
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
-                              {prefix}: {dbRisk}% Nominal
-                            </span>
-                          );
-                        })()}
-                      </div>
-                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
-                        <div 
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            dbRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : dbRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`} 
-                          style={{ width: `${dbRisk}%` }}
-                        />
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${dbRisk > 75 ? 'bg-rose-500' : dbRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${dbRisk}%` }} />
                       </div>
                     </div>
 
-                    {/* Heap Memory Trajectory */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Heap Memory Trajectory</span>
-                        {(() => {
-                          const prefix = "Heap Mem";
-                          if (memRisk > 75) {
-                            return (
-                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
-                                {prefix}: {memRisk}% Critical Risk
-                              </span>
-                            );
-                          }
-                          if (memRisk >= 50) {
-                            return (
-                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
-                                {prefix}: {memRisk}% Warning
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
-                              {prefix}: {memRisk}% Nominal
-                            </span>
-                          );
-                        })()}
+                    {/* Heap Memory */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono-tech">
+                        <span className="text-slate-300 font-semibold">Heap Memory Trajectory</span>
+                        <span className={memRisk > 75 ? "text-rose-400 font-bold" : memRisk >= 50 ? "text-amber-400" : "text-emerald-400"}>
+                          Risk: {memRisk}%
+                        </span>
                       </div>
-                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
-                        <div 
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            memRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : memRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`} 
-                          style={{ width: `${memRisk}%` }}
-                        />
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${memRisk > 75 ? 'bg-rose-500' : memRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${memRisk}%` }} />
                       </div>
                     </div>
 
-                    {/* Network Request Saturation */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Network Saturation</span>
-                        {(() => {
-                          const prefix = "Network Sat";
-                          if (netRisk > 75) {
-                            return (
-                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
-                                {prefix}: {netRisk}% Critical Risk
-                              </span>
-                            );
-                          }
-                          if (netRisk >= 50) {
-                            return (
-                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
-                                {prefix}: {netRisk}% Warning
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
-                              {prefix}: {netRisk}% Nominal
-                            </span>
-                          );
-                        })()}
+                    {/* Network Saturation */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono-tech">
+                        <span className="text-slate-300 font-semibold">Network Saturation</span>
+                        <span className={netRisk > 75 ? "text-rose-400 font-bold" : netRisk >= 50 ? "text-amber-400" : "text-emerald-400"}>
+                          Risk: {netRisk}%
+                        </span>
                       </div>
-                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
-                        <div 
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            netRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : netRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`} 
-                          style={{ width: `${netRisk}%` }}
-                        />
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${netRisk > 75 ? 'bg-rose-500' : netRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${netRisk}%` }} />
                       </div>
                     </div>
 
-                    {/* Thread Pool Utilization */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase font-mono-tech">Thread Pool Utilization</span>
-                        {(() => {
-                          const prefix = "Thread Pool";
-                          if (threadRisk > 75) {
-                            return (
-                              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-500/20 animate-pulse font-mono font-bold">
-                                {prefix}: {threadRisk}% Critical Risk
-                              </span>
-                            );
-                          }
-                          if (threadRisk >= 50) {
-                            return (
-                              <span className="bg-amber-500/10 text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-500/20 font-mono font-semibold">
-                                {prefix}: {threadRisk}% Warning
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
-                              {prefix}: {threadRisk}% Nominal
-                            </span>
-                          );
-                        })()}
+                    {/* Thread Pool */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono-tech">
+                        <span className="text-slate-300 font-semibold">Thread Pool Utilization</span>
+                        <span className={threadRisk > 75 ? "text-rose-400 font-bold" : threadRisk >= 50 ? "text-amber-400" : "text-emerald-400"}>
+                          Risk: {threadRisk}%
+                        </span>
                       </div>
-                      <div className="w-full bg-slate-800/40 rounded-full h-1.5 overflow-hidden border border-slate-700/30">
-                        <div 
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            threadRisk > 75 ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : threadRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`} 
-                          style={{ width: `${threadRisk}%` }}
-                        />
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${threadRisk > 75 ? 'bg-rose-500' : threadRisk >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${threadRisk}%` }} />
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* ORCHESTRATION MODE PANEL (3/12 width) */}
-              <div className="lg:col-span-3 border border-slate-800 bg-slate-900/90 p-4 rounded-lg flex flex-col justify-between h-full">
-                <div>
-                  <h3 className="text-slate-400 font-bold text-xs tracking-wider uppercase font-mono-tech">ORCHESTRATION MODE</h3>
-                  <div className="flex flex-col gap-4 mt-2">
-                    <span className="text-[10px] text-slate-500 font-mono-tech uppercase tracking-wider font-semibold">
-                      MANUAL OVERRIDE MODE
-                    </span>
+              {/* Tab 4: Terminal Console Logs */}
+              {drawerTab === 'terminal' && (
+                <div className="bg-black border border-slate-800 rounded-2xl flex flex-col h-[550px] text-emerald-400 font-mono text-xs overflow-hidden shadow-2xl">
+                  <div className="flex justify-between items-center border-b border-slate-800 px-4 py-3 bg-[#0d1322]">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span className="font-bold text-white uppercase tracking-wider">// INCIDENT COMMAND CENTER TERMINAL</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-400/70 font-bold">LIVE_STREAM</span>
+                  </div>
+                  
+                  <div ref={terminalScrollRef} className="overflow-y-auto flex-1 p-4 space-y-1.5 scrollbar-thin scrollbar-thumb-emerald-500/20">
+                    {combinedLogs.length === 0 ? (
+                      <div className="text-emerald-500/50 italic py-2 font-mono">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
+                    ) : (
+                      combinedLogs.map((log: string, idx: number) => {
+                        let lineClass = "whitespace-pre-wrap py-0.5";
+                        if (log.includes("[EXECUTION_SUCCESS]")) {
+                          lineClass += " border-l-2 border-emerald-500/40 pl-2 bg-emerald-950/20";
+                        }
+                        return (
+                          <div key={idx} className={lineClass}>
+                            {renderLogLine(log)}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
+              )}
 
-                <div className="mt-4 pt-4 border-t border-slate-800/60 flex flex-col gap-2">
-                  <button 
-                    className="w-full bg-gradient-to-r from-rose-950/60 to-red-950/60 hover:from-rose-900/80 hover:to-red-900/80 border border-rose-500/40 hover:border-rose-500 text-rose-300 hover:text-white font-mono-tech text-[10.5px] font-bold tracking-widest py-2.5 px-3 rounded transition-all duration-200 active:scale-[0.98] shadow-md uppercase"
-                  >
-                    SIMULATE FAILURE WAVE
-                  </button>
-                </div>
-              </div>
             </div>
-
-            {/* Bottom: Trend Graph */}
-            <RealtimeChart
-              title="System Health Score Trend Graph"
-              dataKey="system_health"
-              color="#00e5ff"
-              history={systemHealthHistory}
-              containerClassName="h-[40vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
-              canvasClassName="flex-1 w-full min-h-[300px]"
-            />
-          </div>
-        )}
-
-        {activeTab === 'cpu' && (
-          <RealtimeChart
-            title="CPU Telemetry Graph"
-            dataKey="cpu_usage"
-            color="#00e5ff"
-            history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
-            canvasClassName="flex-1 w-full min-h-[300px]"
-          />
-        )}
-
-        {activeTab === 'memory' && (
-          <RealtimeChart
-            title="Memory Allocation Graph"
-            dataKey="memory_usage"
-            color="#00ff66"
-            history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
-            canvasClassName="flex-1 w-full min-h-[300px]"
-          />
-        )}
-
-        {activeTab === 'database' && (
-          <RealtimeChart
-            title="Database Connection Pool Graph"
-            dataKey="db_connections"
-            color="#ff0055"
-            history={history}
-            containerClassName="h-[45vh] min-h-[350px] w-full bg-black border border-slate-900 rounded-xl p-6 relative flex flex-col shadow-lg"
-            canvasClassName="flex-1 w-full min-h-[300px]"
-          />
-        )}
-      </div>
-
-      {/* Symmetrical individual grid widgets for analytics */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full mt-2">
-        {/* Left Widget: Statistical Anomalies */}
-        <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 flex flex-col h-[280px] shadow-lg">
-          <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800/60">
-            <h3 className="text-rose-500 text-sm font-bold tracking-wider uppercase font-mono-tech">
-              // Statistical Anomalies (3Σ Drift)
-            </h3>
-            <span className="text-[10px] bg-rose-500/15 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30 font-mono-tech font-bold animate-pulse">LIVE_STREAM</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto pr-1">
-            {safeAlerts.length === 0 ? (
-              <div className="text-slate-400 text-xs italic p-4 border border-dashed border-slate-800/60 rounded-lg font-mono-tech">
-                ✓ System stable. No 3-sigma mathematical drift detected in the current window.
-              </div>
-            ) : (
-              <table className="w-full text-left font-mono-tech border-collapse text-[10px]">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="pb-1.5 font-semibold text-left">TIMESTAMP</th>
-                    <th className="pb-1.5 font-semibold text-left">METRIC</th>
-                    <th className="pb-1.5 font-semibold text-right">VALUE</th>
-                    <th className="pb-1.5 font-semibold text-right">MEAN (μ)</th>
-                    <th className="pb-1.5 font-semibold text-right">STD (σ)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeAlerts.map((alert: any, idx: number) => {
-                    const parsed = parseAlertMessage(alert.message);
-                    const timeStr = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'NOW';
-                    if (parsed) {
-                      return (
-                        <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                          <td className="py-2 text-slate-400 font-semibold">{timeStr}</td>
-                          <td className="py-2 font-bold text-rose-400 uppercase">{parsed.metric}</td>
-                          <td className="py-2 text-right font-extrabold text-white">{parsed.value}</td>
-                          <td className="py-2 text-right text-slate-300 font-semibold">{parsed.mean}</td>
-                          <td className="py-2 text-right text-slate-400">{parsed.std}</td>
-                        </tr>
-                      );
-                    }
-                    return (
-                      <tr key={idx} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                        <td className="py-2 text-slate-400 font-semibold">{timeStr}</td>
-                        <td className="py-2 font-bold text-rose-400 uppercase">{alert.metric || 'SYSTEM'}</td>
-                        <td colSpan={3} className="py-2 text-white">{alert.message}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+          </aside>
         </div>
+      )}
 
-        {/* Right Widget: Predictive ML Forecasts */}
-        <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 flex flex-col h-[280px] shadow-lg">
-          <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800/60">
-            <h3 className="text-cyan-500 text-sm font-bold tracking-wider uppercase font-mono-tech">
-              // Predictive ML Forecasts (AR model)
-            </h3>
-            <span className="text-[10px] bg-cyan-500/15 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30 font-mono-tech font-bold animate-pulse">95%_CONFIDENCE</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
-            {safeAlerts.length === 0 ? (
-              <div className="text-slate-400 text-sm italic p-4 border border-dashed border-slate-800/60 rounded-lg font-mono-tech">
-                ⏳ Telemetry matrices compiling... Running rolling Autoregressive forecast.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono-tech border-b border-slate-800/60 pb-2 mb-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping"></span>
-                    <span>ENGINE: STATSMODELS AR</span>
-                  </div>
-                  <span>LOOKAHEAD: +1.5S</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
-                    <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">CPU Vector Forecast</span>
-                    <div className="bg-cyan-500/10 border border-cyan-500/80 text-cyan-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(6,182,212,0.15)] min-w-[80px] text-center">
-                      {predictions?.cpu_usage?.values?.[0] !== undefined ? `${predictions.cpu_usage.values[0].toFixed(1)}%` : 'STABLE'}
-                    </div>
-                  </div>
-                  {predictions?.memory_usage?.values?.[0] !== undefined && (
-                    <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
-                      <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">Memory Vector Forecast</span>
-                      <div className="bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(16,185,129,0.15)] min-w-[80px] text-center">
-                        {predictions.memory_usage.values[0].toFixed(1)}%
-                      </div>
-                    </div>
-                  )}
-                  {predictions?.db_connections?.values?.[0] !== undefined && (
-                    <div className="flex justify-between items-center bg-[#0d1527] border border-slate-800/60 p-2 px-3 rounded-lg">
-                      <span className="text-[11.5px] font-mono-tech text-slate-300 font-semibold">Database Vector Forecast</span>
-                      <div className="bg-rose-500/10 border border-rose-500/80 text-rose-400 font-bold px-2.5 py-0.5 rounded text-[11px] font-mono-tech shadow-[0_0_8px_rgba(244,63,94,0.15)] min-w-[80px] text-center">
-                        {predictions.db_connections.values[0].toFixed(0)} CONNS
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      </div>
-
-      {/* Real-Time Action Resolution Terminal */}
-      <footer className="h-64 border-t border-slate-800 bg-black/95 w-full flex flex-col text-emerald-400 relative overflow-hidden group transition-all duration-300">
-        <div className="flex justify-between items-center border-b border-slate-800/80 px-4 py-2 bg-black/40">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="text-xs uppercase tracking-widest font-bold font-mono">// AI-SRE PLATFORM INCIDENT COMMAND CENTER</span>
-          </div>
-          <span className="text-[10px] text-emerald-500/60 font-semibold tracking-wider font-mono">STATUS: MONITORING_REMEDIATION</span>
-        </div>
-        <div ref={terminalScrollRef} className="overflow-y-auto flex-1 p-4 font-mono text-sm overscroll-contain flex flex-col gap-1 scrollbar-thin scrollbar-thumb-emerald-500/20 scrollbar-track-transparent">
-          {combinedLogs.length === 0 ? (
-            <div className="text-emerald-500/50 italic py-2 font-mono">// Safe-Heal agent active. Monitoring telemetry matrices...</div>
-          ) : (
-            combinedLogs.map((log: string, idx: number) => {
-              let lineClass = "whitespace-pre-wrap py-0.5";
-              if (log.includes("[EXECUTION_SUCCESS]")) {
-                lineClass += " border-l-2 border-emerald-500/40 pl-2 bg-emerald-950/10";
-              }
-              return (
-                <div key={idx} className={lineClass} style={{ contentVisibility: 'auto' }}>
-                  {renderLogLine(log)}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </footer>
     </main>
   );
 }

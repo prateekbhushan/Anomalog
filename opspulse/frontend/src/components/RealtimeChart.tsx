@@ -12,9 +12,18 @@ interface RealtimeChartProps {
   history: any[];
   containerClassName?: string;
   canvasClassName?: string;
+  height?: number;
 }
 
-const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, color, history, containerClassName, canvasClassName }) => {
+const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ 
+  title, 
+  dataKey, 
+  color, 
+  history, 
+  containerClassName, 
+  canvasClassName,
+  height = 480 
+}) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const uplotInst = useRef<uPlot | null>(null);
   const [resizeTrigger, setResizeTrigger] = useState(0);
@@ -29,14 +38,14 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
 
     const opts: uPlot.Options = {
       width: initialWidth,
-      height: 350, // Strict height constraint
+      height: height,
       scales: {
         x: { time: true },
         y: { auto: true },
       },
       axes: [
-        { stroke: '#94a3b8', grid: { stroke: 'rgba(255,255,255,0.05)' } },
-        { stroke: '#94a3b8', grid: { stroke: 'rgba(255,255,255,0.05)' } },
+        { stroke: '#64748b', grid: { stroke: 'rgba(255,255,255,0.04)' } },
+        { stroke: '#64748b', grid: { stroke: 'rgba(255,255,255,0.04)' } },
       ],
       series: [
         {},
@@ -90,7 +99,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
               const uWidth = (uplotInst.current as any).width;
               // Only call setSize if the width difference is more than 2px to prevent sub-pixel layout loops
               if (Math.abs(uWidth - width) > 2) {
-                uplotInst.current.setSize({ width: Math.floor(width), height: 350 });
+                uplotInst.current.setSize({ width: Math.floor(width), height });
               }
             }
           });
@@ -105,7 +114,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
         if (width > 0) {
           const uWidth = (uplotInst.current as any).width;
           if (Math.abs(uWidth - width) > 2) {
-            uplotInst.current.setSize({ width: Math.floor(width), height: 350 });
+            uplotInst.current.setSize({ width: Math.floor(width), height });
           }
         }
       }
@@ -125,7 +134,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
         uplotInst.current = null;
       }
     };
-  }, [color, resizeTrigger]);
+  }, [color, height, resizeTrigger]);
 
   useEffect(() => {
     if (!uplotInst.current || history.length === 0) return;
@@ -185,18 +194,18 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({ title, dataKey, 
       } else {
         const uWidth = (uplotInst.current as any).width;
         const uHeight = (uplotInst.current as any).height;
-        if (uWidth === 0 || uHeight !== 350 || Math.abs(uWidth - width) > 2) {
-          uplotInst.current.setSize({ width, height: 350 });
+        if (uWidth === 0 || uHeight !== height || Math.abs(uWidth - width) > 2) {
+          uplotInst.current.setSize({ width, height });
         }
       }
     }
-  }, [history, predictions, dataKey]);
+  }, [history, predictions, dataKey, height]);
 
   return (
-    <div className={`w-full min-h-[350px] ${containerClassName || 'chart-card'} ${isAnomalous ? 'anomaly-glow' : ''}`}>
+    <div className={`w-full ${containerClassName || 'chart-card'} ${isAnomalous ? 'anomaly-glow' : ''}`}>
       <h3 className={containerClassName ? "text-lg font-bold tracking-wider uppercase font-mono-tech mb-4 text-slate-200" : ""}>{title}</h3>
       {/* Parent container with strict CSS constraint to prevent infinite layout feedback loop */}
-      <div style={{ position: 'relative', width: '100%', height: '350px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: `${height}px`, overflow: 'hidden' }}>
         <div 
           className={`${canvasClassName || "chart-wrapper"} bg-black`} 
           ref={chartRef} 

@@ -23,6 +23,9 @@ interface MetricsStore {
   isAnomalyPredicted: boolean;
   metricWindow: { cpu: number; memory: number }[];
   customLogs: string[];
+  isAutonomous: boolean;
+  setIsAutonomous: (val: boolean) => void;
+  triggerFailureWave: () => void;
   setLatestMetric: (payload: any) => void;
 }
 
@@ -51,6 +54,64 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
   isAnomalyPredicted: false,
   metricWindow: [],
   customLogs: [],
+  isAutonomous: false,
+  setIsAutonomous: (val) => set({ isAutonomous: val }),
+  triggerFailureWave: () => set((state) => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const ts = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+
+    const spikedMetric: Metric = {
+      timestamp: ts,
+      cpu_usage: 92,
+      memory_usage: 88,
+      db_connections: 880,
+      anomalies: {
+        cpu_usage: true,
+        memory_usage: true,
+        db_connections: true
+      }
+    };
+
+    const newHistory = [...state.history, spikedMetric].slice(-300);
+    const newWindow = [...state.metricWindow, { cpu: 92, memory: 88 }].slice(-5);
+
+    let isAnomalyPredicted = state.isAnomalyPredicted;
+    let customLogs = state.customLogs;
+
+    const current = newWindow[newWindow.length - 1];
+    const prev = newWindow.length >= 4 ? newWindow[newWindow.length - 4] : (newWindow[0] || { cpu: 30, memory: 40 });
+    const cpuDiff = current.cpu - prev.cpu;
+    const memDiff = current.memory - prev.memory;
+    const shouldPredict = cpuDiff > 15 || memDiff > 15 || current.cpu >= 85 || current.memory >= 85;
+
+    if (shouldPredict) {
+      isAnomalyPredicted = true;
+      const newLog = `[${ts}] [AI_PREDICTIVE_ENGINE]: High growth trajectory detected. Forecasting system failure condition within 15 cycles.`;
+      if (!customLogs.includes(newLog)) {
+        customLogs = [...customLogs, newLog];
+      }
+    }
+
+    const spikeAlert = {
+      metric: 'cpu_usage',
+      message: `3σ Drift: Cpu Usage spiked to 92.0 (μ: 30.0, σ: 15.2)`,
+      timestamp: ts
+    };
+    const newAlerts = [spikeAlert, ...state.alerts].slice(0, 20);
+
+    const mergedLogs = mergeLogs(state.actionLogs, customLogs);
+
+    return {
+      latestMetric: spikedMetric,
+      history: newHistory,
+      alerts: newAlerts,
+      metricWindow: newWindow,
+      isAnomalyPredicted,
+      customLogs,
+      actionLogs: mergedLogs
+    };
+  }),
   setLatestMetric: (payload) => set((state) => {
     if (payload.type === 'history' && Array.isArray(payload.data)) {
       const historyMetrics = payload.data.map((p: any) => ({
