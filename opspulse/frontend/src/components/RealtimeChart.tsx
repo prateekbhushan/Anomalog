@@ -63,13 +63,14 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
   const [resizeTrigger, setResizeTrigger] = useState(0);
   const [localHistory, setLocalHistory] = useState<any[]>([]);
 
+  const isConnected = useMetricsStore((state) => state.isConnected);
   const predictions = useMetricsStore((state) => state.predictions?.[dataKey as any]);
   const isAnomalous = useMetricsStore((state) => (state.latestMetric?.anomalies as any)?.[dataKey] ?? false);
 
   // Fallback Interval implementation
   useEffect(() => {
-    // If the server provides real history, turn off the fallback generator
-    if (history && history.length > 0) {
+    // If the server is connected and provides real history, turn off the fallback generator
+    if (isConnected && history && history.length > 0) {
       if (localHistory.length > 0) {
         setLocalHistory([]);
       }
@@ -123,10 +124,10 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [history]);
+  }, [history, isConnected]);
 
   // Determine active data sources
-  const dataToRender = history && history.length > 0 ? history : localHistory;
+  const dataToRender = isConnected && history && history.length > 0 ? history : localHistory;
 
   // Generate realistic mock predictions in fallback mode
   const mockPredictions = useMemo(() => {
@@ -161,11 +162,11 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
     return { values, lower, upper };
   }, [dataToRender, dataKey]);
 
-  const predictionsToRender = history && history.length > 0 ? predictions : mockPredictions;
+  const predictionsToRender = isConnected && history && history.length > 0 ? predictions : mockPredictions;
 
   const lastLocalPoint = localHistory[localHistory.length - 1];
   const isLocalAnomalous = lastLocalPoint?.anomalies?.[dataKey] ?? false;
-  const isAnomalousToRender = history && history.length > 0 ? isAnomalous : isLocalAnomalous;
+  const isAnomalousToRender = isConnected && history && history.length > 0 ? isAnomalous : isLocalAnomalous;
 
   // Chart setup
   useEffect(() => {
@@ -338,10 +339,10 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
   }, [dataToRender, predictionsToRender, dataKey, height]);
 
   return (
-    <div className={`w-full ${containerClassName || 'chart-card'} ${isAnomalousToRender ? 'anomaly-glow' : ''}`}>
+    <div className={`w-full ${containerClassName || 'chart-card'} ${isAnomalousToRender ? 'anomaly-glow' : ''} min-h-[320px]`}>
       <h3 className={containerClassName ? "text-lg font-bold tracking-wider uppercase font-mono-tech mb-4 text-slate-200" : ""}>{title}</h3>
       <div 
-        className="min-h-[320px]" 
+        className="min-h-[320px] w-full" 
         style={{ position: 'relative', width: '100%', height: `${height}px`, minHeight: '320px', overflow: 'hidden' }}
       >
         <div 

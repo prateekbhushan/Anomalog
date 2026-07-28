@@ -27,6 +27,8 @@ interface MetricsStore {
   setIsAutonomous: (val: boolean) => void;
   triggerFailureWave: () => void;
   setLatestMetric: (payload: any) => void;
+  isConnected: boolean;
+  setIsConnected: (val: boolean) => void;
 }
 
 const mergeLogs = (backendLogs: string[], customLogs: string[]): string[] => {
@@ -56,6 +58,8 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
   customLogs: [],
   isAutonomous: false,
   setIsAutonomous: (val) => set({ isAutonomous: val }),
+  isConnected: false,
+  setIsConnected: (val) => set({ isConnected: val }),
   triggerFailureWave: () => set((state) => {
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -297,6 +301,7 @@ export const useMetricsStore = create<MetricsStore>((set) => ({
 
 export const useMetricsSocket = (url: string) => {
   const setLatestMetric = useMetricsStore((state) => state.setLatestMetric);
+  const setIsConnected = useMetricsStore((state) => state.setIsConnected);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef<number>(0);
@@ -315,6 +320,7 @@ export const useMetricsSocket = (url: string) => {
         if (!isMounted) return;
         console.log('WebSocket connection established.');
         retryCountRef.current = 0;
+        setIsConnected(true);
       };
 
       ws.onmessage = (event) => {
@@ -330,6 +336,7 @@ export const useMetricsSocket = (url: string) => {
 
       ws.onclose = (event) => {
         if (!isMounted) return;
+        setIsConnected(false);
 
         const attempt = retryCountRef.current + 1;
         if (attempt <= 5) {
@@ -346,6 +353,7 @@ export const useMetricsSocket = (url: string) => {
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        setIsConnected(false);
       };
     };
 
@@ -356,9 +364,10 @@ export const useMetricsSocket = (url: string) => {
       if (wsRef.current) {
         wsRef.current.close();
       }
+      setIsConnected(false);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [url, setLatestMetric]);
+  }, [url, setLatestMetric, setIsConnected]);
 };

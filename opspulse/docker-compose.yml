@@ -1,36 +1,33 @@
-version: '3.8'
-
 services:
   redis:
     image: redis:7-alpine
-    container_name: anomalog-redis
+    container_name: opspulse-redis
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
     volumes:
       - redis_data:/data
     networks:
-      - anomalog-net
+      - opspulse-net
 
   timescaledb:
     image: timescale/timescaledb:latest-pg15
-    container_name: anomalog-timescaledb
+    container_name: opspulse-timescaledb
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=anomalog
+      - POSTGRES_DB=opspulse
     ports:
       - "5432:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
     networks:
-      - anomalog-net
+      - opspulse-net
 
 volumes:
   redis_data:
   timescale_data:
 
 networks:
-  anomalog-net:
+  opspulse-net:
     driver: bridge
-
