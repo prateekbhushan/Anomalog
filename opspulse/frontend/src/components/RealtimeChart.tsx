@@ -7,7 +7,7 @@ import { useMetricsStore } from '@/hooks/useMetricsSocket';
 
 interface RealtimeChartProps {
   title: string;
-  dataKey: 'cpu_usage' | 'memory_usage' | 'db_connections' | 'system_health';
+  dataKey: 'cpu_usage' | 'memory_usage' | 'db_connections' | 'system_health' | 'z_index';
   color: string;
   history: any[];
   containerClassName?: string;
@@ -174,18 +174,32 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
 
     const initialWidth = chartRef.current.clientWidth || 350;
 
+    const isZIndex = dataKey === 'z_index';
     const opts: uPlot.Options = {
       width: initialWidth,
       height: height,
       scales: {
         x: { time: true },
-        y: { auto: true },
+        y: isZIndex ? { auto: false, range: [0, 5] } : { auto: true },
       },
       axes: [
-        { stroke: '#64748b', grid: { stroke: 'rgba(255,255,255,0.04)' } },
-        { stroke: '#64748b', grid: { stroke: 'rgba(255,255,255,0.04)' } },
+        { stroke: '#8a7465', grid: { stroke: 'rgba(138,116,101,0.08)' } },
+        { stroke: '#8a7465', grid: { stroke: 'rgba(138,116,101,0.08)' } },
       ],
-      series: [
+      series: isZIndex ? [
+        {},
+        {
+          label: "Current",
+          stroke: '#e67e22',
+          width: 2,
+        },
+        {
+          label: "Threshold (3.0)",
+          stroke: '#fd79a8',
+          width: 1.5,
+          dash: [4, 4],
+        }
+      ] : [
         {},
         {
           label: "Actual",
@@ -214,7 +228,7 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
       bands: []
     };
 
-    const initialData: [number[], number[], number[], number[], number[]] = [[], [], [], [], []];
+    const initialData: any = isZIndex ? [[], [], []] : [[], [], [], [], []];
     
     if (uplotInst.current) {
       uplotInst.current.destroy();
@@ -279,46 +293,53 @@ const RealtimeChartComponent: React.FC<RealtimeChartProps> = ({
 
     const lastPoint = dataToRender[dataToRender.length - 1];
     const lastTime = new Date(lastPoint.timestamp).getTime() / 1000;
-    const lastVal = lastPoint[dataKey];
 
-    const xPast = dataToRender.map(h => new Date(h.timestamp).getTime() / 1000);
-    const yPast = dataToRender.map(h => h[dataKey]);
-
-    let xFuture: number[] = [];
-    let yForecast: (number | null)[] = [];
-    let yLower: (number | null)[] = [];
-    let yUpper: (number | null)[] = [];
-
-    const pred = predictionsToRender;
-    if (pred && Array.isArray(pred.values) && pred.values.length > 0) {
-      const steps = pred.values.length;
-      xFuture = Array.from({ length: steps }, (_, i) => lastTime + 0.1 * (i + 1));
-      
-      yForecast = [
-        ...Array(dataToRender.length - 1).fill(null),
-        lastVal,
-        ...pred.values
-      ];
-      yLower = [
-        ...Array(dataToRender.length - 1).fill(null),
-        lastVal,
-        ...pred.lower
-      ];
-      yUpper = [
-        ...Array(dataToRender.length - 1).fill(null),
-        lastVal,
-        ...pred.upper
-      ];
+    if (dataKey === 'z_index') {
+      const xPast = dataToRender.map(h => new Date(h.timestamp).getTime() / 1000);
+      const yPast = dataToRender.map(h => h[dataKey] ?? 0);
+      const yThreshold = Array(dataToRender.length).fill(3.0);
+      uplotInst.current.setData([xPast, yPast, yThreshold]);
     } else {
-      yForecast = Array(dataToRender.length).fill(null);
-      yLower = Array(dataToRender.length).fill(null);
-      yUpper = Array(dataToRender.length).fill(null);
+      const lastVal = lastPoint[dataKey];
+      const xPast = dataToRender.map(h => new Date(h.timestamp).getTime() / 1000);
+      const yPast = dataToRender.map(h => h[dataKey]);
+
+      let xFuture: number[] = [];
+      let yForecast: (number | null)[] = [];
+      let yLower: (number | null)[] = [];
+      let yUpper: (number | null)[] = [];
+
+      const pred = predictionsToRender;
+      if (pred && Array.isArray(pred.values) && pred.values.length > 0) {
+        const steps = pred.values.length;
+        xFuture = Array.from({ length: steps }, (_, i) => lastTime + 0.1 * (i + 1));
+        
+        yForecast = [
+          ...Array(dataToRender.length - 1).fill(null),
+          lastVal,
+          ...pred.values
+        ];
+        yLower = [
+          ...Array(dataToRender.length - 1).fill(null),
+          lastVal,
+          ...pred.lower
+        ];
+        yUpper = [
+          ...Array(dataToRender.length - 1).fill(null),
+          lastVal,
+          ...pred.upper
+        ];
+      } else {
+        yForecast = Array(dataToRender.length).fill(null);
+        yLower = Array(dataToRender.length).fill(null);
+        yUpper = Array(dataToRender.length).fill(null);
+      }
+
+      const xCombined = [...xPast, ...xFuture];
+      const yActualPad = [...yPast, ...Array(xFuture.length).fill(null)];
+
+      uplotInst.current.setData([xCombined, yActualPad, yForecast, yLower, yUpper]);
     }
-
-    const xCombined = [...xPast, ...xFuture];
-    const yActualPad = [...yPast, ...Array(xFuture.length).fill(null)];
-
-    uplotInst.current.setData([xCombined, yActualPad, yForecast, yLower, yUpper]);
 
     if (chartRef.current) {
       const width = chartRef.current.clientWidth;

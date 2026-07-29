@@ -12,13 +12,15 @@
    2. SYSTEM ARCHITECTURE VARIABLES & BASE STYLES
    ========================================================================== */
 :root {
-  --bg-primary: #060913;
-  --bg-secondary: rgba(11, 15, 25, 0.65);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-blue: #00e5ff;
-  --accent-red: #ff0055;
-  --accent-green: #00ff66;
+  --bg-primary: #0c0a09;
+  --bg-secondary: #14110f;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --accent-copper: #ca8a04;
+  --accent-copper-hover: #b45309;
+  --accent-orange: #d97706;
+  --accent-red: #dc2626;
+  --accent-green: #16a34a;
   --font-mono: 'Share Tech Mono', monospace;
 }
 
@@ -26,8 +28,8 @@ body {
   margin: 0;
   background-color: var(--bg-primary);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(0, 229, 255, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(255, 0, 85, 0.03) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(217, 119, 6, 0.02) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(220, 38, 38, 0.01) 0px, transparent 50%);
   color: var(--text-primary);
   font-family: 'Outfit', system-ui, sans-serif;
   min-height: 100vh;
@@ -223,7 +225,7 @@ body {
 @layer utilities {
   /* Premium Glassmorphic Panel Design Pattern */
   .glass-panel {
-    @apply bg-[#070b14]/80 backdrop-blur-md border border-slate-800/60;
+    @apply bg-[#14110f] border border-[#2e211b];
   }
   
   /* Cyberpunk Monospace Dynamic Text Renderer */
@@ -238,14 +240,14 @@ body {
   }
 
   .border-slate-750 {
-    border-color: #293548;
+    border-color: #2e211b;
   }
 }
 
 /* Neon Drop-Shadows Variants */
-.neon-glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.15); }
-.neon-glow-green { box-shadow: 0 0 15px rgba(34, 197, 94, 0.15); }
-.neon-glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.15); }
+.neon-glow-copper { box-shadow: 0 0 15px rgba(217, 119, 6, 0.08); }
+.neon-glow-green { box-shadow: 0 0 15px rgba(22, 163, 74, 0.08); }
+.neon-glow-red { box-shadow: 0 0 15px rgba(220, 38, 38, 0.08); }
 
 /* Premium Breathing Glow Animation for AI-SRE Active Badge */
 @keyframes sre-breathe {
