@@ -1,268 +1,89 @@
-/* ==========================================================================
-   1. TAILWIND BASE DIRECTIVES (Always at the Top)
-   ========================================================================== */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
-/* Custom Google Fonts Ingestion */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@300;400;500;600;700&display=swap');
-
-/* ==========================================================================
-   2. SYSTEM ARCHITECTURE VARIABLES & BASE STYLES
-   ========================================================================== */
 :root {
-  --bg-primary: #0c0a09;
-  --bg-secondary: #14110f;
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --accent-copper: #ca8a04;
-  --accent-copper-hover: #b45309;
-  --accent-orange: #d97706;
-  --accent-red: #dc2626;
-  --accent-green: #16a34a;
-  --font-mono: 'Share Tech Mono', monospace;
+  --bg-canvas: #0D0C0B;
+  --bg-surface: #161412;
+  --bg-surface-hover: #1F1B18;
+  --border-subtle: #28231F;
+  --border-active: #3D352E;
+  
+  --accent-amber: #E87928;
+  --accent-amber-light: #FF8A3D;
+  --accent-amber-dark: #B45309;
+  --accent-amber-bg: rgba(232, 121, 40, 0.15);
+  
+  --text-primary: #EDEDED;
+  --text-secondary: #9E948C;
+  --text-muted: #6B635B;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-primary);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(217, 119, 6, 0.02) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(220, 38, 38, 0.01) 0px, transparent 50%);
+  background-color: var(--bg-canvas);
   color: var(--text-primary);
-  font-family: 'Outfit', system-ui, sans-serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ==========================================================================
-   3. CORE TELEMETRY LAYOUT ENGINE
-   ========================================================================== */
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  padding: 2rem;
-  box-sizing: border-box;
+/* Custom Scrollbar for Terminal / Log Stream */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.header {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+::-webkit-scrollbar-track {
+  background: #110F0E;
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #fff, #94a3b8);
-  -webkit-background-clip: text;
-  background-clip: text; /* FIXED: Cross-browser standard compatibility added */
-  -webkit-text-fill-color: transparent;
+::-webkit-scrollbar-thumb {
+  background: #2D2722;
+  border-radius: 3px;
 }
 
-.header-uptime {
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  color: var(--accent-blue);
-  letter-spacing: 0.05em;
-  background: rgba(0, 229, 255, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+::-webkit-scrollbar-thumb:hover {
+  background: #453C35;
 }
 
-.header-uptime::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background-color: var(--accent-green);
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--accent-green);
+/* Blinking Cursor Animation for Terminal Footer */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-/* ==========================================================================
-   4. SYSTEM COUNTERS & DENSE METRICS GRID
-   ========================================================================== */
-.ticker-container {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+.animate-blink-cursor {
+  animation: blink-cursor 1s infinite steps(1);
 }
 
-.ticker-item {
-  background: var(--bg-secondary);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 1.5rem;
-  border-radius: 12px;
-  flex: 1;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.5s ease-in-out;
-  transform: translateZ(0); /* Force GPU Acceleration */
+/* Pulsating Live Status Dot */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-.ticker-item:hover {
-  transform: translateY(-4px) translateZ(0);
-  box-shadow: 0 12px 30px rgba(0, 229, 255, 0.05);
-  border-color: rgba(0, 229, 255, 0.2);
+.animate-status-pulse {
+  animation: status-pulse 2s infinite ease-in-out;
 }
 
-.ticker-label {
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 0.5rem;
-}
-
-.ticker-value {
-  font-size: 2.75rem;
-  font-weight: 700;
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-family: var(--font-mono);
-}
-
-.ticker-unit {
-  font-size: 1.15rem;
-  color: var(--text-secondary);
-}
-
-/* ==========================================================================
-   5. HIGH-DENSITY CHARTS CONFIGURATION
-   ========================================================================== */
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.chart-card {
-  background: var(--bg-secondary);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out;
-  transform: translateZ(0); /* Force GPU Acceleration */
-  min-height: 350px;
-  width: 100%;
-}
-
-.chart-card h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.15rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-}
-
-.chart-wrapper {
-  flex: 1;
-  position: relative;
-  min-height: 300px;
-  width: 100%;
-}
-
-/* Pulsating Neon Red Anomaly Glow (3-Sigma Breach Feedback) */
-@keyframes anomaly-pulsate {
-  0% {
-    box-shadow: 0 0 10px rgba(255, 0, 85, 0.15), inset 0 0 5px rgba(255, 0, 85, 0.05);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(255, 0, 85, 0.5), inset 0 0 12px rgba(255, 0, 85, 0.15);
-    border-color: rgba(255, 0, 85, 0.35);
-  }
-  100% {
-    box-shadow: 0 0 10px rgba(255, 0, 85, 0.15), inset 0 0 5px rgba(255, 0, 85, 0.05);
-  }
-}
-
-.anomaly-glow {
-  animation: anomaly-pulsate 2s infinite ease-in-out;
-  border-color: rgba(255, 0, 85, 0.3) !important;
-}
-
-/* ==========================================================================
-   6. uPLOT CANVAS CORE OVERRIDES
-   ========================================================================== */
+/* uPlot Legend & Canvas Overrides */
 .uplot {
   font-family: var(--font-mono);
 }
+
 .u-legend {
-  color: var(--text-primary);
-  font-size: 0.8rem;
+  color: #9E948C;
+  font-size: 11px;
 }
+
 .u-legend td, .u-legend th {
-  padding: 2px 8px;
-}
-
-/* ==========================================================================
-   7. CUSTOM TAILWIND LAYER UTILITIES
-   ========================================================================== */
-@layer utilities {
-  /* Premium Glassmorphic Panel Design Pattern */
-  .glass-panel {
-    @apply bg-[#14110f] border border-[#2e211b];
-  }
-  
-  /* Cyberpunk Monospace Dynamic Text Renderer */
-  .font-mono-tech {
-    font-family: var(--font-mono);
-    letter-spacing: 0.05em;
-  }
-
-  /* 3D Perspective for Antigravity Card Rotation */
-  .perspective-1000 {
-    perspective: 1000px;
-  }
-
-  .border-slate-750 {
-    border-color: #2e211b;
-  }
-}
-
-/* Neon Drop-Shadows Variants */
-.neon-glow-copper { box-shadow: 0 0 15px rgba(217, 119, 6, 0.08); }
-.neon-glow-green { box-shadow: 0 0 15px rgba(22, 163, 74, 0.08); }
-.neon-glow-red { box-shadow: 0 0 15px rgba(220, 38, 38, 0.08); }
-
-/* Premium Breathing Glow Animation for AI-SRE Active Badge */
-@keyframes sre-breathe {
-  0%, 100% {
-    box-shadow: 0 0 4px rgba(16, 185, 129, 0.15), inset 0 0 2px rgba(16, 185, 129, 0.05);
-    border-color: rgba(16, 185, 129, 0.25);
-    background-color: rgba(6, 78, 59, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(16, 185, 129, 0.55), inset 0 0 8px rgba(16, 185, 129, 0.25);
-    border-color: rgba(16, 185, 129, 0.65);
-    background-color: rgba(6, 78, 59, 0.35);
-  }
-}
-
-.animate-sre-breathe {
-  animation: sre-breathe 2.5s infinite ease-in-out;
+  padding: 2px 6px;
 }
